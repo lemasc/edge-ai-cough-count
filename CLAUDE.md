@@ -122,14 +122,3 @@ for trial in Trial:
 ```
 
 Times are in seconds from the start of the recording.
-
-## Citation
-
-If using this dataset/code, cite:
-
-```
-Orlandic, L., Thevenot, J., Teijeiro, T., & Atienza, D. (2023).
-A Multimodal Dataset for Automatic Edge-AI Cough Detection.
-2023 45th Annual International Conference of the IEEE Engineering
-in Medicine & Biology Society (EMBC), 1-7.
-```
