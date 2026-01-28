@@ -1,0 +1,32 @@
+[project]
+name = "edge-ai-cough-count"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "datasets>=4.5.0",
+    "imbalanced-learn>=0.14.1",
+    "jupyter>=1.1.1",
+    "librosa>=0.11.0",
+    "matplotlib>=3.10.8",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.0",
+    "torch>=2.9.1",
+    "torchcodec>=0.9.1",
+    "tqdm>=4.67.1",
+    "xgboost>=3.1.3",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchcodec = [
+  { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
