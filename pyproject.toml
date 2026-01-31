@@ -1,0 +1,18 @@
+[project]
+name = "edge-ai-cough-count"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.10.*"
+dependencies = [
+    "imblearn>=0.0",
+    "jupyter>=1.1.1",
+    "librosa>=0.11.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.15.3",
+    "tqdm>=4.67.2",
+    "xgboost>=3.1.3",
+]
