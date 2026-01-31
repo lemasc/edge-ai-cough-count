@@ -160,6 +160,9 @@ def get_samples_for_subject(data_folder, subj_id, window_len, aug_factor):
                     # Extract non-cough windows
                     for sound in Sound:
                         path = data_folder + subj_id + '/trial_' + trial + '/mov_' + mov + '/background_noise_' + noise + '/' + sound
+                        if not os.path.exists(path):
+                            print(f"{path} not found. Skipped.")
+                            continue
                         if (sound != sound.COUGH) & (len(os.listdir(path)) > 0):
                             audio, imu = get_non_cough_windows(data_folder,subj_id, trial,mov,noise,sound,num_coughs*aug_factor, window_len)
                             gt = np.zeros(audio.shape[0])
