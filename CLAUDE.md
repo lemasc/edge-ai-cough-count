@@ -8,6 +8,20 @@ This is a research repository for edge-AI cough counting using multimodal biosig
 
 Dataset available at: https://zenodo.org/record/7562332
 
+## Development Environment Setup
+
+Install dependencies using either uv or pip:
+
+```bash
+# Using uv (recommended)
+uv sync
+
+# Using pip
+pip install -r requirements.txt
+```
+
+The project requires Python 3.10. Dependencies are managed in `pyproject.toml` and frozen in `requirements.txt`.
+
 ## Core Architecture
 
 ### Dataset Structure
@@ -52,6 +66,12 @@ public_dataset/
 - `get_samples_for_subject()`: Generate balanced cough/non-cough dataset for a single subject across all conditions
 - Returns shape: audio `(N, window_len*16000, 2)`, IMU `(N, window_len*100, 6)`, labels `(N,)`
 
+**`src/features.py`** - Feature extraction for classical ML models:
+
+- `extract_audio_features()`: Extract 65 audio features from a single window (MFCC, spectral features, time-domain features)
+- `extract_imu_features()`: Extract 40 IMU features from 8 signals (3 accel + accel_L2 + 3 gyro + gyro_L2) using 5 features per signal (line length, zero-crossing rate, kurtosis, crest factor, RMS)
+- Used for training lightweight XGBoost classifiers suitable for edge deployment
+
 ### Jupyter Notebooks
 
 **`notebooks/Segmentation_Augmentation.ipynb`**:
@@ -64,6 +84,19 @@ public_dataset/
 
 - Explains semi-automatic fine-grained cough labeling methodology
 - Useful for teams wanting to merge datasets with consistent labeling
+
+**`notebooks/Feature_Extraction.ipynb`**:
+
+- Demonstrates extracting handcrafted features from biosignal windows
+- Uses `extract_audio_features()` and `extract_imu_features()` from `src/features.py`
+- Prepares feature matrices for training classical ML models (e.g., XGBoost)
+
+**`notebooks/Model_Training_XGBoost.ipynb`**:
+
+- Complete training pipeline for edge-friendly cough detection models
+- Implements subject-wise cross-validation to avoid data leakage
+- Uses SMOTE for class balancing and RFECV for feature selection
+- Trains XGBoost classifier and reports ROC-AUC metrics
 
 **`notebooks/Compute_Success_Metrics.ipynb`**:
 
@@ -122,3 +155,48 @@ for trial in Trial:
 ```
 
 Times are in seconds from the start of the recording.
+
+## ML Training Workflow
+
+The repository supports two types of ML approaches:
+
+### 1. Classical ML (Edge-Friendly)
+
+For lightweight models suitable for edge deployment:
+
+1. **Segment data** using `src/dataset_gen.py` - creates 0.4s windows with augmentation
+2. **Extract features** using `src/features.py` - computes 65 audio + 40 IMU handcrafted features
+3. **Train XGBoost** with subject-wise cross-validation (see `notebooks/Model_Training_XGBoost.ipynb`)
+4. **Evaluate** using event-based metrics via `timescoring` library
+
+Key considerations:
+
+- Use **0.4-second windows** for edge efficiency (6400 audio samples, 40 IMU samples)
+- Apply **subject-wise cross-validation** (Leave-n-Subjects-Out) to avoid leakage
+- Use **SMOTE** for class balancing (apply only on training splits)
+- Target metrics: ROC-AUC ~0.96 for multimodal models
+
+### 2. Deep Learning (Optional)
+
+For teams exploring neural network approaches:
+
+1. Use `src/dataset_gen.py` to generate raw signal windows (longer windows like 0.7s)
+2. Build custom feature extractors or end-to-end models
+3. Maintain subject-wise splitting to prevent data leakage
+
+## Model Evaluation
+
+Event-based metrics using `timescoring`:
+
+```python
+from timescoring import scoring
+tp, fp, fn = scoring(ground_truth_times, predicted_times,
+                     toleranceStart=0.25, toleranceEnd=0.25,
+                     minOverlap=0.1)
+```
+
+This approach is clinically meaningful for cough counting applications.
+
+## Additional Documentation
+
+- `model-training-documentation.md`: Comprehensive guide to reproducing the paper's classical ML pipeline with XGBoost, including expected performance targets and troubleshooting tips
