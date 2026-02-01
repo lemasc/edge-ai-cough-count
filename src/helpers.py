@@ -75,19 +75,19 @@ def load_audio(folder, subject_id, trial, mov, noise, sound, normalize_1=False):
     """
     
     fn = subject_id + '/trial_' + trial + '/mov_' + mov + '/background_noise_' + noise + '/' + sound + '/'
-    
-    try:        
+
+    try:
         fs_aa, audio_air = wavfile.read(folder + fn + "outward_facing_mic.wav")
     except FileNotFoundError as err:
-        print("ERROR: Air mic file not found")
+        raise FileNotFoundError(f"Air mic file not found: {folder + fn}outward_facing_mic.wav")
 
-    try:        
+    try:
         fs_as, audio_skin = wavfile.read(folder + fn + "body_facing_mic.wav")
     except FileNotFoundError as err:
-        print("ERROR: Skin mic file not found")
-    
+        raise FileNotFoundError(f"Skin mic file not found: {folder + fn}body_facing_mic.wav")
+
     if (fs_aa != fs_as):
-        print("ERROR: Mismatching sampling rates")
+        raise ValueError(f"Mismatching sampling rates: air={fs_aa}, skin={fs_as}")
    
     
     if normalize_1:
@@ -319,11 +319,10 @@ def load_imu(folder, subject_id, trial, mov, noise, sound):
     """Load the IMU signal from file into an IMU object"""
     fn = subject_id + '/trial_' + trial + '/mov_' + mov + '/background_noise_' + noise + '/' + sound + '/imu.csv'
 
-    try:        
+    try:
         df = pd.read_csv(folder + fn)
     except FileNotFoundError as err:
-        print("ERROR: IMU file not found")
-        return 0
+        raise FileNotFoundError(f"IMU file not found: {folder + fn}")
     
     
     Y = df['Gyro Y'].to_numpy()
