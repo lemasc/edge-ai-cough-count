@@ -4,3 +4,4 @@ venv/
 *.npz
 .ipynb_checkpoints/
 models/
+notebooks/shap/
