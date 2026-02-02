@@ -97,5 +97,82 @@ def extract_imu_features(imu_window):
         
         # RMS power
         features.append(rms)
-    
+
     return np.array(features)
+
+
+def get_audio_feature_names():
+    """
+    Generate feature names for audio features.
+
+    Returns:
+        list: 65 audio feature names in extraction order
+    """
+    names = []
+
+    # MFCC (52): 13 coefficients × 4 statistics
+    for coef in range(1, 14):
+        for stat in ['mean', 'std', 'min', 'max']:
+            names.append(f'MFCC_{coef:02d}_{stat}')
+
+    # Spectral (10)
+    names.extend([
+        'Spectral_Centroid',
+        'Spectral_Rolloff',
+        'Spectral_Bandwidth',
+        'Spectral_Flatness',
+        'Spectral_Contrast',
+        'PSD_Total_Power',
+        'PSD_Dominant_Freq',
+        'Spectral_Spread',
+        'Spectral_Skewness',
+        'Spectral_Kurtosis'
+    ])
+
+    # Time-domain (3)
+    names.extend([
+        'ZCR_Audio',
+        'RMS_Audio',
+        'Crest_Factor_Audio'
+    ])
+
+    return names
+
+
+def get_imu_feature_names():
+    """
+    Generate feature names for IMU features.
+
+    Returns:
+        list: 40 IMU feature names in extraction order
+    """
+    names = []
+    signals = ['Accel_X', 'Accel_Y', 'Accel_Z', 'Accel_L2',
+               'Gyro_Y', 'Gyro_P', 'Gyro_R', 'Gyro_L2']
+    features = ['LineLength', 'ZCR', 'Kurtosis', 'CrestFactor', 'RMS']
+
+    for sig in signals:
+        for feat in features:
+            names.append(f'{sig}_{feat}')
+
+    return names
+
+
+def get_feature_names(modality='multimodal'):
+    """
+    Generate feature names for SHAP visualization.
+
+    Args:
+        modality: 'imu', 'audio', or 'multimodal'
+
+    Returns:
+        list: Feature name strings in extraction order
+    """
+    if modality == 'audio':
+        return get_audio_feature_names()
+    elif modality == 'imu':
+        return get_imu_feature_names()
+    elif modality == 'multimodal':
+        return get_audio_feature_names() + get_imu_feature_names()
+    else:
+        raise ValueError(f"Unknown modality: {modality}. Use 'imu', 'audio', or 'multimodal'.")
