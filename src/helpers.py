@@ -58,17 +58,17 @@ class IMU_Short(str, Enum):
     R = "R"
     
 ##### Data loading functions #####
-def load_audio(folder, subject_id, trial, mov, noise, sound, normalize_1=False):
+def load_audio(folder, subject_id, trial, mov, noise, sound, normalize_1=True):
     """
     Load the audio signals (Both body-facing and outward-facing) of a given recording
         Inputs:
             - folder: string, folder where the database is stored
-            - subject_id: string, numerical ID of the subject 
+            - subject_id: string, numerical ID of the subject
             - trial: Trial Enum, which trial the recording was part of
             - mov: Movement Enum, specifies kinematic noise condition of the recording
             - noise: Noise Enum, audio noise condition of the recording
             - sound: Sound Enum, which noise was being performed (ex. cough, laugh, etc.)
-            - normalize_1: Whether to normalize recording s.t. it has a mean of zero and maximum absolute value of 1
+            - normalize_1: Whether to normalize recording s.t. it has a mean of zero and maximum absolute value of 1 (default: True for compatibility with diverse audio formats)
         Outputs:
             - audio_air: outward-facing microphone signal
             - audio_skin: body-facing micriphone signal
@@ -95,9 +95,9 @@ def load_audio(folder, subject_id, trial, mov, noise, sound, normalize_1=False):
         audio_air = audio_air - np.mean(audio_air)
         audio_air = audio_air/(np.max(np.abs(audio_air))+1e-17)
         audio_skin = audio_skin - np.mean(audio_skin)
-        audio_air = audio_skin/(np.max(np.abs(audio_skin))+1e-17)
+        audio_skin = audio_skin/(np.max(np.abs(audio_skin))+1e-17)
     else:
-        # Normalize recordings based on maximum value
+        # Normalize recordings based on maximum value (dataset-specific: 24-bit PCM shifted by 8 bits)
         max_val = 1<<29
         audio_air = audio_air/max_val
         audio_skin = audio_skin/max_val
