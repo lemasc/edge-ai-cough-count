@@ -107,3 +107,30 @@ We're merging events with gaps ≤ 0.3s.
 But their "same cough" dedupe threshold is **0.23s** and their "bout" boundary logic is keyed off **0.55s**.
 
 So it's very plausible that 0.3s merging is **too aggressive** for cough counting unless us add a peak-based splitter afterward (as above).
+
+---
+
+## Implementation note: why we deviate from the paper's Step 1 threshold
+
+The paper's hysteresis thresholds are computed **per candidate segment**:
+
+```
+thr_hi = (mean_power_of_chunk + max_power_of_chunk) / 2
+thr_lo = mean_power_of_chunk
+```
+
+This works when each candidate segment is short and homogeneous (one or two
+coughs of similar amplitude).  In our pipeline, `merge_detections()` can
+produce large candidates spanning several seconds and multiple coughs of
+very different amplitudes.  In that case `max_power` is dominated by the
+single loudest spike, pushing `thr_hi` high enough to mask quieter coughs
+in the same segment (verified on Subject 14287 / Trial 1 / Sit / Nothing /
+Cough — the quiet cough at ~5.5 s was dropped entirely).
+
+**Our fix:** we call `segment_cough()` (helpers.py) on the **full audio**
+instead.  Its threshold `th_h = 2 × RMS_full_recording` is calibrated to
+the whole recording, which is mostly silence, so the global RMS is low and
+every real cough clears the bar.  ML candidate regions then act as a
+validation gate: only segments whose peak falls within ±0.3 s of a confirmed
+candidate are kept.  Steps 2 (dedup 0.23 s) and 3 (bout-split 0.55 s)
+are applied unchanged.
