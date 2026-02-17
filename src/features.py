@@ -9,27 +9,33 @@ def extract_audio_features(audio_window, fs=16000):
     1. **MFCC (52)**: 13 coefficients × 4 statistics (mean, std, min, max)
     2. **Spectral (10)**: Centroid, rolloff, bandwidth, flatness, contrast, PSD features, spectral spread/skewness/kurtosis
     3. **Time-domain (3)**: Zero-crossing rate, RMS energy, crest factor
-    
+
     Args:
         audio_window: 1D array of audio samples
         fs: Sampling frequency (16000 Hz)
-    
+
     Returns:
         np.array: 65 features
     """
     features = []
-    
+
+    # Compute STFT once; reuse magnitude spectrogram S across all librosa calls
+    # to avoid redundant FFT computations (previously each call recomputed the STFT).
+    S = np.abs(librosa.stft(audio_window))   # magnitude spectrogram
+    S_power = S ** 2                          # power spectrogram
+
     # MFCC features (52)
-    mfccs = librosa.feature.mfcc(y=audio_window, sr=fs, n_mfcc=13)
+    mel_S = librosa.feature.melspectrogram(S=S_power, sr=fs)
+    mfccs = librosa.feature.mfcc(S=librosa.power_to_db(mel_S), n_mfcc=13)
     for coef in mfccs:
         features.extend([np.mean(coef), np.std(coef), np.min(coef), np.max(coef)])
-    
-    # Spectral features (10)
-    features.append(np.mean(librosa.feature.spectral_centroid(y=audio_window, sr=fs)))
-    features.append(np.mean(librosa.feature.spectral_rolloff(y=audio_window, sr=fs)))
-    features.append(np.mean(librosa.feature.spectral_bandwidth(y=audio_window, sr=fs)))
-    features.append(np.mean(librosa.feature.spectral_flatness(y=audio_window)))
-    features.append(np.mean(librosa.feature.spectral_contrast(y=audio_window, sr=fs)))
+
+    # Spectral features (10) — pass pre-computed S to avoid re-running the FFT
+    features.append(np.mean(librosa.feature.spectral_centroid(S=S, sr=fs)))
+    features.append(np.mean(librosa.feature.spectral_rolloff(S=S, sr=fs)))
+    features.append(np.mean(librosa.feature.spectral_bandwidth(S=S, sr=fs)))
+    features.append(np.mean(librosa.feature.spectral_flatness(S=S)))
+    features.append(np.mean(librosa.feature.spectral_contrast(S=S, sr=fs)))
     
     # PSD-based features
     f, psd = signal.welch(audio_window, fs=fs)
