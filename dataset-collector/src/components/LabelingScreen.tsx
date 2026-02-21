@@ -86,7 +86,6 @@ export function LabelingScreen({ result, mimeType, onReset }: Props) {
     try {
       const { zipBytes, filename } = await buildZip(
         result.audioBlob,
-        result.imuSamples,
         result.durationMs,
         mimeType,
         label,

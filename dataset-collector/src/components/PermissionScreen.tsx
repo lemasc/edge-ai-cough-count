@@ -51,7 +51,7 @@ export function PermissionScreen({ phase, permissions, onStart, onBeginRecording
           <div className="mb-4 text-5xl">🎤</div>
           <h1 className="text-2xl font-bold">Cough Dataset Collector</h1>
           <p className="mt-2 text-gray-400 text-sm">
-            Records audio and motion data for cough detection research
+            Records audio for cough detection research
           </p>
         </div>
 
@@ -61,17 +61,6 @@ export function PermissionScreen({ phase, permissions, onStart, onBeginRecording
               Permissions
             </p>
             <StatusBadge status={permissions.audio} label="Microphone" />
-            <StatusBadge status={permissions.imu} label="Motion Sensor (IMU)" />
-            {permissions.imu === 'unavailable' && (
-              <p className="text-xs text-gray-500">
-                IMU unavailable on this device — audio-only recording will proceed.
-              </p>
-            )}
-            {permissions.imu === 'denied' && (
-              <p className="text-xs text-red-400">
-                Motion access denied. Please allow in device settings and reload.
-              </p>
-            )}
             {permissions.audio === 'denied' && (
               <p className="text-xs text-red-400">
                 Microphone access denied. Please allow in browser settings and reload.
@@ -107,10 +96,6 @@ export function PermissionScreen({ phase, permissions, onStart, onBeginRecording
             Begin Recording
           </button>
         )}
-
-        <p className="text-center text-xs text-gray-600">
-          iOS: tap "Start" to trigger motion permission dialog
-        </p>
       </div>
     </div>
   );

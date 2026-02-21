@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { AppState, PermissionStatus } from './types.ts';
 import { useAudioRecorder } from './hooks/useAudioRecorder.ts';
-import { useIMURecorder } from './hooks/useIMURecorder.ts';
 import { PermissionScreen } from './components/PermissionScreen.tsx';
 import { RecordingScreen } from './components/RecordingScreen.tsx';
 import { LabelingScreen } from './components/LabelingScreen.tsx';
@@ -11,27 +10,20 @@ export default function App() {
   const [mimeType, setMimeType] = useState('');
 
   const audio = useAudioRecorder();
-  const imu = useIMURecorder();
 
-  // Called on the "Start" button click — must be synchronous so iOS
-  // can chain DeviceMotionEvent.requestPermission() in the same gesture.
   const handleStart = useCallback(() => {
     setState({ phase: 'requesting-permissions' });
 
     void (async () => {
-      const [audioResult, imuResult] = await Promise.all([
-        audio.requestPermission(),
-        imu.requestPermission(),
-      ]);
+      const audioResult = await audio.requestPermission();
 
       const permissions: PermissionStatus = {
         audio: audioResult,
-        imu: imuResult,
       };
 
       setState({ phase: 'ready', permissions });
     })();
-  }, [audio, imu]);
+  }, [audio]);
 
   const handleBeginRecording = useCallback(() => {
     if (state.phase !== 'ready') return;
@@ -39,10 +31,9 @@ export default function App() {
 
     const startTime = performance.now();
     audio.startRecording();
-    imu.startRecording(startTime);
 
     setState({ phase: 'recording', startTime, permissions });
-  }, [state, audio, imu]);
+  }, [state, audio]);
 
   const handleStop = useCallback(() => {
     if (state.phase !== 'recording') return;
@@ -50,10 +41,7 @@ export default function App() {
 
     void (async () => {
       const durationMs = performance.now() - startTime;
-      const [audioBlob, imuSamples] = await Promise.all([
-        audio.stopRecording(),
-        Promise.resolve(imu.stopRecording()),
-      ]);
+      const audioBlob = await audio.stopRecording();
 
       setMimeType(audio.getMimeType());
 
@@ -110,7 +98,6 @@ export default function App() {
       <RecordingScreen
         phase="recording"
         startTime={state.startTime}
-        sampleCount={imu.sampleCount}
         onStop={handleStop}
         onLabel={() => {}}
       />
@@ -122,7 +109,6 @@ export default function App() {
       <RecordingScreen
         phase="stopped"
         startTime={0}
-        sampleCount={state.result.imuSamples.length}
         durationMs={state.result.durationMs}
         onStop={() => {}}
         onLabel={handleLabel}

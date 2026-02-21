@@ -1,6 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
-import type { IMUSample, RecordingLabel } from '../types.ts';
-import { imuToCsv } from './imuToCsv.ts';
+import type { RecordingLabel } from '../types.ts';
 
 function mimeToExt(mimeType: string): string {
   if (mimeType.includes('mp4')) return '.mp4';
@@ -10,7 +9,6 @@ function mimeToExt(mimeType: string): string {
 
 export function buildZip(
   audioBlob: Blob,
-  imuSamples: IMUSample[],
   durationMs: number,
   mimeType: string,
   label: RecordingLabel,
@@ -21,8 +19,6 @@ export function buildZip(
       try {
         const audioBuffer = new Uint8Array(reader.result as ArrayBuffer);
         const ext = mimeToExt(mimeType);
-
-        const csvString = imuToCsv(imuSamples);
 
         const groundTruth = JSON.stringify({ start_times: [], end_times: [] }, null, 2);
 
@@ -35,9 +31,6 @@ export function buildZip(
             trial: label.trial,
             duration_seconds: durationMs / 1000,
             audio_mime_type: mimeType,
-            imu_accel_source: 'accelerationIncludingGravity',
-            imu_placement: 'back-against-chest-mic-up',
-            imu_gyro_mapping: 'alpha=pitch, beta=yaw, gamma=roll',
             device: navigator.userAgent,
             recorded_at: new Date().toISOString(),
           },
@@ -48,7 +41,6 @@ export function buildZip(
         const zipData = zipSync(
           {
             [`outward_facing_mic${ext}`]: [audioBuffer, { level: 0 }],
-            'imu.csv': [strToU8(csvString), { level: 6 }],
             'ground_truth.json': [strToU8(groundTruth), { level: 6 }],
             'metadata.json': [strToU8(metadata), { level: 6 }],
           },

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 type Props = {
   phase: 'recording' | 'stopped';
   startTime: number;
-  sampleCount: number;
   durationMs?: number;
   onStop: () => void;
   onLabel: () => void;
@@ -19,7 +18,6 @@ function formatTime(ms: number): string {
 export function RecordingScreen({
   phase,
   startTime,
-  sampleCount,
   durationMs,
   onStop,
   onLabel,
@@ -61,10 +59,6 @@ export function RecordingScreen({
           )}
 
           <div className="font-mono text-6xl font-bold tabular-nums">{formatTime(displayMs)}</div>
-
-          <div className="text-sm text-gray-500">
-            IMU samples: <span className="text-gray-300 font-mono">{sampleCount}</span>
-          </div>
         </div>
 
         {phase === 'recording' && (
@@ -82,10 +76,6 @@ export function RecordingScreen({
               <div className="flex justify-between">
                 <span className="text-gray-500">Duration</span>
                 <span className="font-mono">{formatTime(durationMs ?? 0)}</span>
-              </div>
-              <div className="mt-1 flex justify-between">
-                <span className="text-gray-500">IMU samples</span>
-                <span className="font-mono">{sampleCount}</span>
               </div>
             </div>
 

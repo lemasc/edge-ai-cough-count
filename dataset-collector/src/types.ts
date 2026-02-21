@@ -28,19 +28,8 @@ export const TRIAL_OPTIONS: { value: Trial; label: string }[] = [
   { value: '3', label: 'Trial 3' },
 ];
 
-export type IMUSample = {
-  t: number; // ms since recording start
-  ax: number;
-  ay: number;
-  az: number;
-  gY: number;
-  gP: number;
-  gR: number;
-};
-
 export type RecordingResult = {
   audioBlob: Blob;
-  imuSamples: IMUSample[];
   durationMs: number;
 };
 
@@ -54,7 +43,6 @@ export type RecordingLabel = {
 
 export type PermissionStatus = {
   audio: 'unknown' | 'granted' | 'denied' | 'unavailable';
-  imu: 'unknown' | 'granted' | 'denied' | 'unavailable';
 };
 
 export type AppState =
