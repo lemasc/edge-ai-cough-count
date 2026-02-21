@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import librosa
+import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -60,6 +61,9 @@ async def predict(audio: UploadFile):
         log.debug("Read %d bytes", len(audio_bytes))
 
         y, _ = librosa.load(io.BytesIO(audio_bytes), sr=FS_AUDIO, mono=True)
+        # Peak normalization matching training preprocessing (load_audio normalize_1=True)
+        y = y - y.mean()
+        y = y / (np.abs(y).max() + 1e-17)
         log.debug("Decoded audio: %d samples (%.2f s)", len(y), len(y) / FS_AUDIO)
 
         duration = len(y) / FS_AUDIO
