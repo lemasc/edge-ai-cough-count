@@ -5,7 +5,7 @@ type Props = {
   startTime: number;
   durationMs?: number;
   onStop: () => void;
-  onLabel: () => void;
+  onPredict: () => void;
 };
 
 function formatTime(ms: number): string {
@@ -20,7 +20,7 @@ export function RecordingScreen({
   startTime,
   durationMs,
   onStop,
-  onLabel,
+  onPredict,
 }: Props) {
   const [elapsed, setElapsed] = useState(0);
 
@@ -80,10 +80,10 @@ export function RecordingScreen({
             </div>
 
             <button
-              onClick={onLabel}
+              onClick={onPredict}
               className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
             >
-              Label &amp; Download
+              Analyze
             </button>
           </div>
         )}

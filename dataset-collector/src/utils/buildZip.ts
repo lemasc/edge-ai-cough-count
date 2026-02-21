@@ -1,5 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
-import type { RecordingLabel } from '../types.ts';
+import type { PredictionResult, RecordingLabel } from '../types.ts';
 
 function mimeToExt(mimeType: string): string {
   if (mimeType.includes('mp4')) return '.mp4';
@@ -11,6 +11,7 @@ export function buildZip(
   audioBlob: Blob,
   durationMs: number,
   mimeType: string,
+  prediction: PredictionResult,
   label: RecordingLabel,
 ): Promise<{ zipBytes: Uint8Array; filename: string }> {
   return new Promise((resolve, reject) => {
@@ -20,7 +21,14 @@ export function buildZip(
         const audioBuffer = new Uint8Array(reader.result as ArrayBuffer);
         const ext = mimeToExt(mimeType);
 
-        const groundTruth = JSON.stringify({ start_times: [], end_times: [] }, null, 2);
+        const groundTruth = JSON.stringify(
+          {
+            start_times: prediction.start_times,
+            end_times: prediction.end_times,
+          },
+          null,
+          2,
+        );
 
         const metadata = JSON.stringify(
           {

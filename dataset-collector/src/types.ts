@@ -33,6 +33,14 @@ export type RecordingResult = {
   durationMs: number;
 };
 
+export type PredictionResult = {
+  start_times: number[];
+  end_times: number[];
+  cough_count: number;
+  window_times: number[];
+  probabilities: number[];
+};
+
 export type RecordingLabel = {
   subjectId: string;
   sound: Sound;
@@ -51,4 +59,6 @@ export type AppState =
   | { phase: 'ready'; permissions: PermissionStatus }
   | { phase: 'recording'; startTime: number; permissions: PermissionStatus }
   | { phase: 'stopped'; result: RecordingResult; permissions: PermissionStatus }
-  | { phase: 'labeling'; result: RecordingResult };
+  | { phase: 'predicting'; result: RecordingResult }
+  | { phase: 'results'; result: RecordingResult; prediction: PredictionResult }
+  | { phase: 'labeling'; result: RecordingResult; prediction: PredictionResult };

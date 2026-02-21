@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
-import type { AppState, PermissionStatus } from './types.ts';
+import type { AppState, PermissionStatus, PredictionResult } from './types.ts';
 import { useAudioRecorder } from './hooks/useAudioRecorder.ts';
 import { PermissionScreen } from './components/PermissionScreen.tsx';
 import { RecordingScreen } from './components/RecordingScreen.tsx';
 import { LabelingScreen } from './components/LabelingScreen.tsx';
+import { PredictionScreen } from './components/PredictionScreen.tsx';
 
 export default function App() {
   const [state, setState] = useState<AppState>({ phase: 'idle' });
@@ -47,15 +48,45 @@ export default function App() {
 
       setState({
         phase: 'stopped',
-        result: { audioBlob, imuSamples, durationMs },
+        result: { audioBlob, durationMs },
         permissions,
       });
     })();
-  }, [state, audio, imu]);
+  }, [state, audio]);
+
+  const handlePredict = useCallback(() => {
+    if (state.phase !== 'stopped') return;
+    const { result } = state;
+
+    setState({ phase: 'predicting', result });
+
+    void (async () => {
+      try {
+        const formData = new FormData();
+        formData.append('audio', result.audioBlob, `recording${audio.getMimeType().includes('mp4') ? '.mp4' : audio.getMimeType().includes('ogg') ? '.ogg' : '.webm'}`);
+
+        const response = await fetch('/api/predict', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+
+        const prediction = (await response.json()) as PredictionResult;
+
+        setState({ phase: 'results', result, prediction });
+      } catch (err) {
+        // On error go back to stopped so user can retry
+        setState({ phase: 'stopped', result, permissions: { audio: 'granted' } });
+      }
+    })();
+  }, [state, audio]);
 
   const handleLabel = useCallback(() => {
-    if (state.phase !== 'stopped') return;
-    setState({ phase: 'labeling', result: state.result });
+    if (state.phase !== 'results') return;
+    setState({ phase: 'labeling', result: state.result, prediction: state.prediction });
   }, [state]);
 
   const handleReset = useCallback(() => {
@@ -99,7 +130,7 @@ export default function App() {
         phase="recording"
         startTime={state.startTime}
         onStop={handleStop}
-        onLabel={() => {}}
+        onPredict={() => {}}
       />
     );
   }
@@ -111,6 +142,29 @@ export default function App() {
         startTime={0}
         durationMs={state.result.durationMs}
         onStop={() => {}}
+        onPredict={handlePredict}
+      />
+    );
+  }
+
+  if (state.phase === 'predicting') {
+    return (
+      <PredictionScreen
+        phase="predicting"
+        durationMs={state.result.durationMs}
+        onReset={handleReset}
+        onLabel={() => {}}
+      />
+    );
+  }
+
+  if (state.phase === 'results') {
+    return (
+      <PredictionScreen
+        phase="results"
+        durationMs={state.result.durationMs}
+        prediction={state.prediction}
+        onReset={handleReset}
         onLabel={handleLabel}
       />
     );
@@ -120,6 +174,7 @@ export default function App() {
     return (
       <LabelingScreen
         result={state.result}
+        prediction={state.prediction}
         mimeType={mimeType}
         onReset={handleReset}
       />

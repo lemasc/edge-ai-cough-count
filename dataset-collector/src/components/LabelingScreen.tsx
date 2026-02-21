@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type {
   RecordingResult,
+  PredictionResult,
   RecordingLabel,
   Sound,
   Movement,
@@ -17,6 +18,7 @@ import { buildZip, downloadZip } from '../utils/buildZip.ts';
 
 type Props = {
   result: RecordingResult;
+  prediction: PredictionResult;
   mimeType: string;
   onReset: () => void;
 };
@@ -53,7 +55,7 @@ function SelectField<T extends string>({
   );
 }
 
-export function LabelingScreen({ result, mimeType, onReset }: Props) {
+export function LabelingScreen({ result, prediction, mimeType, onReset }: Props) {
   const [subjectId, setSubjectId] = useState('');
   const [sound, setSound] = useState<Sound | ''>('');
   const [movement, setMovement] = useState<Movement | ''>('');
@@ -88,6 +90,7 @@ export function LabelingScreen({ result, mimeType, onReset }: Props) {
         result.audioBlob,
         result.durationMs,
         mimeType,
+        prediction,
         label,
       );
       downloadZip(zipBytes, filename);
