@@ -8,6 +8,8 @@ This repository contains useful functions that researchers can use to use our pu
 
 - Code for generating biosignal segments from the public dataset to streamline ML algorithm development
 - Testing your predicted cough locations against the ground truth in an event-based manner
+- A FastAPI inference server exposing trained models via a REST API
+- A browser-based recording tool for collecting new labelled samples using the trained model as a real-time annotator
 
 ## Data access
 
@@ -17,19 +19,12 @@ Additionally, the dataset has been downloaded and extracted locally to ./public_
 
 ## Getting started
 
-To start using the code, please make sure you have all of the necessary Python dependencies. We recommend doing this in a new Conda or pip environment using one of the following commands:
+### Python dependencies
 
-Conda:
-
-```
-conda env create -f environment.yml
+Install Python dependencies (Python 3.10 required). Using uv is recommended.
 
 ```
-
-Pip:
-
-```
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Usage
@@ -53,6 +48,52 @@ The `Compute_Success_Metrics.ipynb` notebook demonstrates how to use [the timesc
 The `helpers.py` file contains useful functions for quickly iterating through the database structure, performing some signal processing, and loading the biosignals and annotations.
 
 The `dataset_gen.py` file segments the raw biosignals and contains useful functions for creating a cough detection database for training edge-AI Machine Learning Models.
+
+## Inference server
+
+A FastAPI server exposes the trained audio-only XGBoost model via a REST API, enabling real-time cough detection from audio recordings.
+
+**Prerequisites:** train and save the model by running `notebooks/Model_Training_XGBoost.ipynb` first. The server loads `notebooks/models/xgb_audio.pkl` at startup.
+
+```bash
+uvicorn server.main:app --reload
+```
+
+Endpoints:
+
+- `GET /api/health` — health check
+- `POST /api/predict` — accepts a multipart audio file upload, returns detected cough events:
+
+```json
+{
+  "cough_count": 3,
+  "start_times": [1.25, 4.80, 7.10],
+  "end_times": [1.75, 5.20, 7.55],
+  "window_times": [...],
+  "probabilities": [...]
+}
+```
+
+Audio is automatically resampled to 16 kHz and peak-normalized to match training preprocessing. Any format supported by librosa (WAV, MP3, OGG, WebM, MP4) is accepted.
+
+## Dataset collector
+
+A browser-based PWA in `dataset-collector/` for recording new labelled audio samples. It records audio via the browser microphone, sends it to the inference server for automatic cough annotation, displays the detected cough events for review, then packages the recording and its annotations into a ZIP file ready for inclusion in future dataset releases.
+
+**Prerequisites:** the inference server must be running.
+
+```bash
+cd dataset-collector
+pnpm install
+pnpm dev      # opens on http://localhost:5173
+```
+
+Each downloaded ZIP contains:
+- `outward_facing_mic.{webm,mp4,ogg}` — the raw audio recording
+- `ground_truth.json` — predicted cough start/end times (used as pseudo-ground-truth)
+- `metadata.json` — subject ID, sound type, movement condition, background noise, trial number, and device info
+
+The Vite dev server proxies `/api/*` requests to the backend automatically.
 
 # Citations
 
