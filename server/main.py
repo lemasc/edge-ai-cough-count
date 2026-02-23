@@ -1,13 +1,12 @@
-import io
 import logging
 import pickle
+import subprocess
 import sys
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-import librosa
 import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +24,21 @@ from helpers import FS_AUDIO
 from predict import sliding_window_predict, merge_detections, create_dummy_imu
 
 model_data: dict[str, Any] = {}
+
+
+def load_audio_bytes(data: bytes, sr: int) -> np.ndarray:
+    """Decode audio bytes via ffmpeg, supporting all formats including audio/mp4 (iPhone AAC)."""
+    cmd = [
+        "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+        "-i", "pipe:0",
+        "-f", "f32le", "-acodec", "pcm_f32le",
+        "-ar", str(sr), "-ac", "1",
+        "pipe:1",
+    ]
+    result = subprocess.run(cmd, input=data, capture_output=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg decode failed: {result.stderr.decode()}")
+    return np.frombuffer(result.stdout, dtype=np.float32).copy()
 
 
 @asynccontextmanager
@@ -60,7 +74,7 @@ async def predict(audio: UploadFile):
         audio_bytes = await audio.read()
         log.debug("Read %d bytes", len(audio_bytes))
 
-        y, _ = librosa.load(io.BytesIO(audio_bytes), sr=FS_AUDIO, mono=True)
+        y = load_audio_bytes(audio_bytes, sr=FS_AUDIO)
         # Peak normalization matching training preprocessing (load_audio normalize_1=True)
         y = y - y.mean()
         y = y / (np.abs(y).max() + 1e-17)
