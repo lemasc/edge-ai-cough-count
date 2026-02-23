@@ -21,7 +21,12 @@ repo_root = Path(__file__).parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "src")) 
 from helpers import FS_AUDIO
-from predict import sliding_window_predict, merge_detections, create_dummy_imu
+from predict import (
+    sliding_window_predict,
+    merge_detections,
+    refine_cough_events,
+    create_dummy_imu,
+)
 
 model_data: dict[str, Any] = {}
 
@@ -100,7 +105,8 @@ async def predict(audio: UploadFile):
                 "probabilities": [],
             }
 
-        predictions = merge_detections(raw_preds, gap_threshold=0.3)
+        candidate_segments = merge_detections(raw_preds, gap_threshold=0.5)
+        predictions = refine_cough_events(y, candidate_segments)
 
         start_times = [round(s, 3) for s, e, p in predictions]
         end_times = [round(e, 3) for s, e, p in predictions]
