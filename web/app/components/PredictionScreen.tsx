@@ -1,6 +1,6 @@
-import type { PredictionResult } from "../types.ts";
-import { WaveformPlayer } from "./WaveformPlayer.tsx";
-import { formatSeconds } from "../utils/formatTime.ts";
+import type { PredictionResult } from "../types";
+import { WaveformPlayer } from "./WaveformPlayer";
+import { formatSeconds } from "../utils/formatTime";
 
 type Props =
   | {

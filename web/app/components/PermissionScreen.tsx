@@ -1,4 +1,4 @@
-import type { PermissionStatus } from '../types.ts';
+import type { PermissionStatus } from '../types';
 
 type Props = {
   phase: 'idle' | 'requesting-permissions' | 'ready';

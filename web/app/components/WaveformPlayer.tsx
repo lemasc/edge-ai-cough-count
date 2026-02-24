@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { formatSeconds } from "../utils/formatTime.ts";
+import { formatSeconds } from "../utils/formatTime";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
 

@@ -7,14 +7,14 @@ import type {
   Movement,
   Noise,
   Trial,
-} from '../types.ts';
+} from '../types';
 import {
   SOUND_OPTIONS,
   MOVEMENT_OPTIONS,
   NOISE_OPTIONS,
   TRIAL_OPTIONS,
-} from '../types.ts';
-import { buildZip, downloadZip } from '../utils/buildZip.ts';
+} from '../types';
+import { buildZip, downloadZip } from '../utils/buildZip';
 
 type Props = {
   result: RecordingResult;

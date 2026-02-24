@@ -1,5 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
-import type { PredictionResult, RecordingLabel } from '../types.ts';
+import type { PredictionResult, RecordingLabel } from '../types';
 
 function mimeToExt(mimeType: string): string {
   if (mimeType.includes('mp4')) return '.mp4';
