@@ -77,7 +77,7 @@ export default function App() {
         const prediction = (await response.json()) as PredictionResult;
 
         setState({ phase: 'results', result, prediction });
-      } catch (err) {
+      } catch {
         // On error go back to stopped so user can retry
         setState({ phase: 'stopped', result, permissions: { audio: 'granted' } });
       }
@@ -163,6 +163,7 @@ export default function App() {
       <PredictionScreen
         phase="results"
         durationMs={state.result.durationMs}
+        audioBlob={state.result.audioBlob}
         prediction={state.prediction}
         onReset={handleReset}
         onLabel={handleLabel}
