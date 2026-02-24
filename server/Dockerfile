@@ -3,7 +3,8 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_PROJECT_ENVIRONMENT=/app/.venv \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    MODEL_DIR=/app/models
 
 WORKDIR /app
 

@@ -1,4 +1,5 @@
 import logging
+import os
 import pickle
 import subprocess
 import sys
@@ -19,7 +20,7 @@ log = logging.getLogger("server")
 
 repo_root = Path(__file__).parent.parent
 sys.path.insert(0, str(repo_root))
-sys.path.insert(0, str(repo_root / "src")) 
+sys.path.insert(0, str(repo_root / "src"))
 from helpers import FS_AUDIO
 from predict import (
     sliding_window_predict,
@@ -48,11 +49,18 @@ def load_audio_bytes(data: bytes, sr: int) -> np.ndarray:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model_path = Path(__file__).parent.parent / "notebooks" / "models" / "xgb_audio.pkl"
+    default_model_dir = Path(__file__).parent.parent / "notebooks" / "models"
+    model_dir = Path(os.environ.get("MODEL_DIR", str(default_model_dir)))
+    log.info("Using MODEL_DIR=%s", model_dir)
+    model_path = model_dir / "xgb_audio.pkl"
     log.info("Loading model from %s", model_path)
     with open(model_path, "rb") as f:
         model_data.update(pickle.load(f))
-    log.info("Model loaded — keys: %s, threshold: %s", list(model_data.keys()), model_data.get("threshold"))
+    log.info(
+        "Model loaded — keys: %s, threshold: %s",
+        list(model_data.keys()),
+        model_data.get("threshold"),
+    )
     yield
     model_data.clear()
 
@@ -74,7 +82,9 @@ def health():
 
 @app.post("/api/predict")
 async def predict(audio: UploadFile):
-    log.info("Received file: name=%s content_type=%s", audio.filename, audio.content_type)
+    log.info(
+        "Received file: name=%s content_type=%s", audio.filename, audio.content_type
+    )
     try:
         audio_bytes = await audio.read()
         log.debug("Read %d bytes", len(audio_bytes))
@@ -90,10 +100,17 @@ async def predict(audio: UploadFile):
 
         threshold = model_data.get("threshold", 0.5)
         raw_preds, all_probs, window_times, _ = sliding_window_predict(
-            y, dummy_imu, model_data, modality='audio',
-            window_len=0.4, hop_size=0.05, threshold=threshold
+            y,
+            dummy_imu,
+            model_data,
+            modality="audio",
+            window_len=0.4,
+            hop_size=0.05,
+            threshold=threshold,
         )
-        log.debug("Built %d windows, %d above threshold", len(all_probs), len(raw_preds))
+        log.debug(
+            "Built %d windows, %d above threshold", len(all_probs), len(raw_preds)
+        )
 
         if len(all_probs) == 0:
             log.warning("Audio too short for even one window (%d samples)", len(y))
@@ -111,7 +128,11 @@ async def predict(audio: UploadFile):
         start_times = [round(s, 3) for s, e, p in predictions]
         end_times = [round(e, 3) for s, e, p in predictions]
 
-        log.info("Detected %d cough event(s): %s", len(start_times), list(zip(start_times, end_times)))
+        log.info(
+            "Detected %d cough event(s): %s",
+            len(start_times),
+            list(zip(start_times, end_times)),
+        )
 
         return {
             "cough_count": len(start_times),
