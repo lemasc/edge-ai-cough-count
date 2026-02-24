@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
-import type { AppState, PermissionStatus, PredictionResult } from './types.ts';
-import { useAudioRecorder } from './hooks/useAudioRecorder.ts';
-import { PermissionScreen } from './components/PermissionScreen.tsx';
-import { RecordingScreen } from './components/RecordingScreen.tsx';
-import { LabelingScreen } from './components/LabelingScreen.tsx';
-import { PredictionScreen } from './components/PredictionScreen.tsx';
+import type { AppState, PermissionStatus, PredictionResult } from '~/types';
+import { useAudioRecorder } from '~/hooks/useAudioRecorder';
+import { PermissionScreen } from '~/components/PermissionScreen';
+import { RecordingScreen } from '~/components/RecordingScreen';
+import { LabelingScreen } from '~/components/LabelingScreen';
+import { PredictionScreen } from '~/components/PredictionScreen';
 
 export default function App() {
   const [state, setState] = useState<AppState>({ phase: 'idle' });
