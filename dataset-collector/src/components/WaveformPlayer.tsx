@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { formatSeconds } from "../utils/formatTime.ts";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
 
@@ -21,6 +22,8 @@ export function WaveformPlayer({
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(0);
   const [minZoom, setMinZoom] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -47,11 +50,13 @@ export function WaveformPlayer({
     wavesurferRef.current = ws;
 
     ws.on("ready", () => {
+      const dur = ws.getDuration();
       const base = Math.ceil(
-        (containerRef.current?.clientWidth ?? 300) / ws.getDuration(),
+        (containerRef.current?.clientWidth ?? 300) / dur,
       );
       setMinZoom(base);
       setZoom(base);
+      setDuration(dur);
       setIsReady(true);
       for (let i = 0; i < startTimes.length; i++) {
         wsRegions.addRegion({
@@ -66,6 +71,7 @@ export function WaveformPlayer({
 
     let destroyed = false;
 
+    ws.on("timeupdate", (t) => setCurrentTime(t));
     ws.on("play", () => setIsPlaying(true));
     ws.on("pause", () => setIsPlaying(false));
     ws.on("finish", () => setIsPlaying(false));
@@ -84,6 +90,8 @@ export function WaveformPlayer({
       setError(null);
       setMinZoom(0);
       setZoom(0);
+      setCurrentTime(0);
+      setDuration(0);
     };
   }, [audioBlob, startTimes, endTimes]);
 
@@ -112,6 +120,12 @@ export function WaveformPlayer({
           <p className="py-4 text-center text-sm text-red-400">{error}</p>
         )}
         <div ref={containerRef} className={error ? "hidden" : ""} />
+      </div>
+      <div className="flex justify-end">
+        <span className="font-mono text-xs tabular-nums text-gray-500">
+          {isReady ? formatSeconds(currentTime) : "0:00"}{" / "}
+          {isReady ? formatSeconds(duration) : "0:00"}
+        </span>
       </div>
       <div className="flex items-center gap-3">
         <span className="shrink-0 text-xs text-gray-500">Zoom</span>

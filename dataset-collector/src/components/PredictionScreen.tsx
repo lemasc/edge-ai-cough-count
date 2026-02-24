@@ -1,5 +1,6 @@
 import type { PredictionResult } from "../types.ts";
 import { WaveformPlayer } from "./WaveformPlayer.tsx";
+import { formatSeconds } from "../utils/formatTime.ts";
 
 type Props =
   | {
@@ -18,9 +19,6 @@ type Props =
       onLabel: () => void;
     };
 
-function formatTime(seconds: number): string {
-  return seconds.toFixed(1) + " s";
-}
 function formatDuration(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
@@ -76,7 +74,7 @@ export function PredictionScreen(props: Props) {
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-gray-500">Cough {i + 1}</span>
                   <span className="font-mono text-gray-200">
-                    {formatTime(start)} – {formatTime(end_times[i] ?? start)}
+                    {formatSeconds(start)} – {formatSeconds(end_times[i] ?? start)}
                   </span>
                 </div>
               ))}
