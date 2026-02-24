@@ -19,6 +19,8 @@ export function WaveformPlayer({
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(0);
+  const [minZoom, setMinZoom] = useState(0);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -29,7 +31,7 @@ export function WaveformPlayer({
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      height: 80,
+      height: 128,
       waveColor: "#4B5563",
       progressColor: "#3B82F6",
       cursorColor: "#60A5FA",
@@ -45,6 +47,11 @@ export function WaveformPlayer({
     wavesurferRef.current = ws;
 
     ws.on("ready", () => {
+      const base = Math.ceil(
+        (containerRef.current?.clientWidth ?? 300) / ws.getDuration(),
+      );
+      setMinZoom(base);
+      setZoom(base);
       setIsReady(true);
       for (let i = 0; i < startTimes.length; i++) {
         wsRegions.addRegion({
@@ -75,8 +82,16 @@ export function WaveformPlayer({
       setIsReady(false);
       setIsPlaying(false);
       setError(null);
+      setMinZoom(0);
+      setZoom(0);
     };
   }, [audioBlob, startTimes, endTimes]);
+
+  useEffect(() => {
+    if (isReady) {
+      wavesurferRef.current?.zoom(zoom);
+    }
+  }, [zoom, isReady]);
 
   const handlePlayPause = () => {
     wavesurferRef.current?.playPause();
@@ -97,6 +112,22 @@ export function WaveformPlayer({
           <p className="py-4 text-center text-sm text-red-400">{error}</p>
         )}
         <div ref={containerRef} className={error ? "hidden" : ""} />
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="shrink-0 text-xs text-gray-500">Zoom</span>
+        <input
+          type="range"
+          min={minZoom}
+          max={minZoom * 10}
+          step={1}
+          value={zoom}
+          onChange={(e) => setZoom(Number(e.target.value))}
+          disabled={!isReady}
+          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-700 accent-blue-500 disabled:opacity-40"
+        />
+        <span className="w-10 shrink-0 text-right text-xs tabular-nums text-gray-500">
+          {minZoom > 0 ? (zoom / minZoom).toFixed(1) : "1.0"}×
+        </span>
       </div>
       <button
         onClick={handlePlayPause}
