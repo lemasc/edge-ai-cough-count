@@ -3,6 +3,7 @@ import os
 import pickle
 import subprocess
 import sys
+import tempfile
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -33,18 +34,42 @@ model_data: dict[str, Any] = {}
 
 
 def load_audio_bytes(data: bytes, sr: int) -> np.ndarray:
-    """Decode audio bytes via ffmpeg, supporting all formats including audio/mp4 (iPhone AAC)."""
-    cmd = [
-        "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
-        "-i", "pipe:0",
-        "-f", "f32le", "-acodec", "pcm_f32le",
-        "-ar", str(sr), "-ac", "1",
-        "pipe:1",
-    ]
-    result = subprocess.run(cmd, input=data, capture_output=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"ffmpeg decode failed: {result.stderr.decode()}")
-    return np.frombuffer(result.stdout, dtype=np.float32).copy()
+    """Decode audio bytes via ffmpeg using a temp file for seekable inputs."""
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".audio") as tmp:
+            tmp.write(data)
+            tmp.flush()
+            tmp_path = tmp.name
+
+        cmd = [
+            "ffmpeg",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            tmp_path,
+            "-f",
+            "f32le",
+            "-acodec",
+            "pcm_f32le",
+            "-ar",
+            str(sr),
+            "-ac",
+            "1",
+            "pipe:1",
+        ]
+        result = subprocess.run(cmd, capture_output=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg decode failed: {result.stderr.decode()}")
+        return np.frombuffer(result.stdout, dtype=np.float32).copy()
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                log.warning("Failed to delete temp file: %s", tmp_path)
 
 
 @asynccontextmanager
@@ -89,7 +114,15 @@ async def predict(audio: UploadFile):
         audio_bytes = await audio.read()
         log.debug("Read %d bytes", len(audio_bytes))
 
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="Empty audio upload")
+
         y = load_audio_bytes(audio_bytes, sr=FS_AUDIO)
+        if y.size == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Decoded audio is empty; check ffmpeg input format",
+            )
         # Peak normalization matching training preprocessing (load_audio normalize_1=True)
         y = y - y.mean()
         y = y / (np.abs(y).max() + 1e-17)
