@@ -6,15 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a research repository for edge-AI cough counting using multimodal biosignals (acoustic and kinematic sensors). The repository provides tools for working with a public dataset of ~4 hours of biosignal data containing 4,300 annotated cough events, along with various non-cough sounds and motion scenarios.
 
-Dataset available at: https://zenodo.org/record/7562332
-
 ## Development Environment
 
 **Python backend** — requires Python 3.10, managed via `pyproject.toml`:
 
 ```bash
-uv sync          # recommended
-pip install -r requirements.txt  # alternative
+uv sync                         # base deps only
+uv sync --group server          # include FastAPI/uvicorn
+uv sync --group notebooks       # include Jupyter, Gradio, etc.
 ```
 
 **Dataset collector frontend** (`dataset-collector/`) — React + TypeScript + Vite app using pnpm:
@@ -22,18 +21,27 @@ pip install -r requirements.txt  # alternative
 ```bash
 cd dataset-collector
 pnpm install
-pnpm dev      # dev server on http://localhost:5173
-pnpm build    # production build to dist/
-pnpm lint     # ESLint check
+pnpm dev       # dev server on http://localhost:5173
+pnpm build     # production build to dist/
+pnpm lint      # TypeScript and ESLint check
 ```
 
 **FastAPI inference server** (`server/`):
 
 ```bash
-uvicorn server.main:app --reload   # from repo root
+uvicorn server.main:app --reload   # from repo root (requires --group server)
 ```
 
 The server expects a trained model at `notebooks/models/xgb_audio.pkl`. Train it first via `notebooks/Model_Training_XGBoost.ipynb`.
+
+**Docker** (server only):
+
+```bash
+docker build -f server/Dockerfile -t cough-server .
+docker run -p 8000:8000 -v $(pwd)/notebooks/models:/app/models cough-server
+# Override model path with MODEL_DIR env var
+docker run -e MODEL_DIR=/custom/path -p 8000:8000 cough-server
+```
 
 ## Repository Architecture
 
@@ -82,8 +90,9 @@ edge-ai-cough-count/
 - `extract_imu_features()` — 40 features (8 derived signals × 5 stats: line length, ZCR, kurtosis, crest factor, RMS)
 
 **`src/predict.py`** — Shared inference pipeline used by both server and notebooks:
-- `sliding_window_predict()` — applies model over continuous recording with 0.4s windows / 0.05s hop
-- `merge_detections()` — merges consecutive window detections within 0.3s gap
+- `sliding_window_predict()` — applies model over continuous recording with 0.4s windows / 0.05s hop; uses `Parallel(n_jobs=2)` threading for feature extraction
+- `merge_detections()` — merges consecutive window detections within 0.5s gap
+- `refine_cough_events()` — audio-based peak refinement (hysteresis segmentation, dedup at 0.23s, bout splitting at 0.55s); applied after merge
 - `create_dummy_imu()` / `create_dummy_audio()` — zero-filled placeholders for single-modality inference
 
 ### FastAPI Inference Server (`server/main.py`)
@@ -92,7 +101,7 @@ Serves the dataset-collector frontend. Single endpoint:
 - `GET /api/health` — health check
 - `POST /api/predict` — accepts multipart audio upload, returns `{cough_count, start_times, end_times, window_times, probabilities}`
 
-Audio is peak-normalized on load to match training preprocessing: `y = (y - mean) / (max_abs + 1e-17)`. Loads `notebooks/models/xgb_audio.pkl` at startup (audio-only model, no IMU required from frontend). Uses `modality='audio'` with dummy IMU.
+Audio is peak-normalized on load to match training preprocessing: `y = (y - mean) / (max_abs + 1e-17)`. Loads `{MODEL_DIR}/xgb_audio.pkl` at startup (audio-only model, no IMU required from frontend). Uses `modality='audio'` with dummy IMU.
 
 ### Dataset Collector Frontend (`dataset-collector/`)
 
@@ -157,3 +166,5 @@ public_dataset/
 
 - `model-training-documentation.md` — comprehensive guide to reproducing the XGBoost pipeline with expected performance targets
 - `interactive-testing-documentation.md` — guide to the Gradio-based interactive model testing notebook (`notebooks/Interactive_Model_Testing.ipynb`)
+- `cough-detection-finetune.md` — explains the post-processing refinement in `refine_cough_events()`: hysteresis segmentation, peak deduplication (0.23s), and bout splitting (0.55s)
+- `dataset-collector/CLAUDE.md` — frontend-specific architecture guide
