@@ -58,11 +58,15 @@ export function WaveformPlayer({
       setZoom(base);
       setDuration(dur);
       setIsReady(true);
+      const regionColors = [
+        "rgba(239, 68, 68, 0.3)",   // red
+        "rgba(234, 179, 8, 0.3)",   // amber
+      ];
       for (let i = 0; i < startTimes.length; i++) {
         wsRegions.addRegion({
           start: startTimes[i],
           end: endTimes[i],
-          color: "rgba(239, 68, 68, 0.25)",
+          color: regionColors[i % 2],
           drag: false,
           resize: false,
         });
