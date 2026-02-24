@@ -90,10 +90,6 @@ async def lifespan(app: FastAPI):
         list(model_data.keys()),
         model_data.get("threshold"),
     )
-    model = model_data.get("model")
-    if hasattr(model, "set_params"):
-        model.set_params(n_jobs=1, nthread=1)
-        log.info("Capped XGBoost threads: n_jobs=1 nthread=1")
     warmup_start = time.perf_counter()
     warmup_duration = 1.0
     warmup_audio = create_dummy_audio(warmup_duration)
