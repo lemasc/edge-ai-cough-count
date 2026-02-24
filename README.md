@@ -23,8 +23,22 @@ Additionally, the dataset has been downloaded and extracted locally to ./public_
 
 Install Python dependencies (Python 3.10 required). Using uv is recommended.
 
+The project uses dependency groups so you can install only what you need:
+
 ```
 uv sync
+```
+
+```
+uv sync --group server
+```
+
+```
+uv sync --group notebooks
+```
+
+```
+uv sync --group server --group notebooks
 ```
 
 ## Usage
@@ -53,7 +67,7 @@ The `dataset_gen.py` file segments the raw biosignals and contains useful functi
 
 A FastAPI server exposes the trained audio-only XGBoost model via a REST API, enabling real-time cough detection from audio recordings.
 
-**Prerequisites:** train and save the model by running `notebooks/Model_Training_XGBoost.ipynb` first. The server loads `notebooks/models/xgb_audio.pkl` at startup.
+**Prerequisites:** train and save the model by running `notebooks/Model_Training_XGBoost.ipynb` first. The server loads `notebooks/models/xgb_audio.pkl` at startup. For local runs, install `ffmpeg` so the server can decode common audio formats.
 
 ```bash
 uvicorn server.main:app --reload
@@ -74,7 +88,18 @@ Endpoints:
 }
 ```
 
-Audio is automatically resampled to 16 kHz and peak-normalized to match training preprocessing. Any format supported by librosa (WAV, MP3, OGG, WebM, MP4) is accepted.
+Audio is automatically resampled to 16 kHz and peak-normalized to match training preprocessing. Any format supported by ffmpeg (WAV, MP3, OGG, WebM, MP4) is accepted.
+
+### Docker server
+
+Build and run the inference server with Docker:
+
+```bash
+docker build -f server/Dockerfile -t cough-server .
+docker run --rm -p 8000:8000 \
+  -v "$(pwd)/notebooks/models:/app/notebooks/models" \
+  cough-server
+```
 
 ## Dataset collector
 
