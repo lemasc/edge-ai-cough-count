@@ -1,13 +1,22 @@
 """predict.py: Shared sliding-window prediction pipeline for cough detection models."""
 
+import logging
+import os
+import time
+
 import numpy as np
 from joblib import Parallel, delayed
 
 from features import extract_audio_features, extract_imu_features
 from helpers import FS_AUDIO, FS_IMU, segment_cough
 
+log = logging.getLogger(__name__)
 
-def extract_features_for_window(audio_window, imu_window, modality='multimodal'):
+_FEATURE_N_JOBS = int(os.environ.get("FEATURE_N_JOBS", "2"))
+_FEATURE_N_JOBS = max(1, _FEATURE_N_JOBS)
+
+
+def extract_features_for_window(audio_window, imu_window, modality="multimodal"):
     """
     Extract features from a single window of audio and IMU data.
 
@@ -21,12 +30,12 @@ def extract_features_for_window(audio_window, imu_window, modality='multimodal')
     """
     features = []
 
-    if modality in ['audio', 'multimodal']:
+    if modality in ["audio", "multimodal"]:
         audio_feat = extract_audio_features(audio_window, fs=FS_AUDIO)
         audio_feat = np.nan_to_num(audio_feat, nan=0.0, posinf=0.0, neginf=0.0)
         features.append(audio_feat)
 
-    if modality in ['imu', 'multimodal']:
+    if modality in ["imu", "multimodal"]:
         imu_feat = extract_imu_features(imu_window)
         imu_feat = np.nan_to_num(imu_feat, nan=0.0, posinf=0.0, neginf=0.0)
         features.append(imu_feat)
@@ -34,20 +43,35 @@ def extract_features_for_window(audio_window, imu_window, modality='multimodal')
     return np.concatenate(features)
 
 
-def _extract_one_window(i, audio, imu, audio_hop_samples, audio_win_samples,
-                        imu_hop_samples, imu_win_samples, modality):
+def _extract_one_window(
+    i,
+    audio,
+    imu,
+    audio_hop_samples,
+    audio_win_samples,
+    imu_hop_samples,
+    imu_win_samples,
+    modality,
+):
     """Extract features for one aligned audio/IMU window (for parallel execution)."""
     audio_start = i * audio_hop_samples
     imu_start = i * imu_hop_samples
     return extract_features_for_window(
-        audio[audio_start:audio_start + audio_win_samples],
-        imu[imu_start:imu_start + imu_win_samples, :],
+        audio[audio_start : audio_start + audio_win_samples],
+        imu[imu_start : imu_start + imu_win_samples, :],
         modality,
     )
 
 
-def sliding_window_predict(audio, imu, model_data, modality='multimodal',
-                           window_len=0.4, hop_size=0.05, threshold=None):
+def sliding_window_predict(
+    audio,
+    imu,
+    model_data,
+    modality="multimodal",
+    window_len=0.4,
+    hop_size=0.05,
+    threshold=None,
+):
     """
     Apply model to continuous recording using sliding windows.
 
@@ -66,10 +90,10 @@ def sliding_window_predict(audio, imu, model_data, modality='multimodal',
         window_times: Array of window center times
         all_windows: List of (start, end, center, prob) for ALL windows
     """
-    model = model_data['model']
-    scaler = model_data['scaler']
+    model = model_data["model"]
+    scaler = model_data["scaler"]
     if threshold is None:
-        threshold = model_data['threshold']
+        threshold = model_data["threshold"]
 
     audio_win_samples = int(window_len * FS_AUDIO)
     audio_hop_samples = int(hop_size * FS_AUDIO)
@@ -78,29 +102,47 @@ def sliding_window_predict(audio, imu, model_data, modality='multimodal',
 
     n_windows_raw = (len(audio) - audio_win_samples) // audio_hop_samples + 1
     n_windows = sum(
-        1 for i in range(n_windows_raw)
+        1
+        for i in range(n_windows_raw)
         if (i * audio_hop_samples + audio_win_samples <= len(audio))
         and (i * imu_hop_samples + imu_win_samples <= len(imu))
     )
 
-    features_list = Parallel(n_jobs=2, prefer='threads')(
+    features_start = time.perf_counter()
+    features_list = Parallel(n_jobs=_FEATURE_N_JOBS, prefer="threads")(
         delayed(_extract_one_window)(
-            i, audio, imu,
-            audio_hop_samples, audio_win_samples,
-            imu_hop_samples, imu_win_samples,
+            i,
+            audio,
+            imu,
+            audio_hop_samples,
+            audio_win_samples,
+            imu_hop_samples,
+            imu_win_samples,
             modality,
         )
         for i in range(n_windows)
     )
+    features_ms = (time.perf_counter() - features_start) * 1000
 
-    window_times = np.array([
-        (i * audio_hop_samples + audio_win_samples / 2) / FS_AUDIO
-        for i in range(n_windows)
-    ])
+    window_times = np.array(
+        [
+            (i * audio_hop_samples + audio_win_samples / 2) / FS_AUDIO
+            for i in range(n_windows)
+        ]
+    )
 
+    predict_start = time.perf_counter()
     X = np.array(features_list)
     X_scaled = scaler.transform(X)
     probs = model.predict_proba(X_scaled)[:, 1]
+    predict_ms = (time.perf_counter() - predict_start) * 1000
+    log.debug(
+        "Timing (ms): features=%.1f predict=%.1f n_jobs=%d windows=%d",
+        features_ms,
+        predict_ms,
+        _FEATURE_N_JOBS,
+        n_windows,
+    )
 
     all_windows = []
     predictions = []
@@ -146,8 +188,9 @@ def merge_detections(predictions, gap_threshold=0.3):
     return merged
 
 
-def refine_cough_events(audio, candidate_segments, fs_audio=FS_AUDIO,
-                        t_dedup=0.23, t_bout=0.55):
+def refine_cough_events(
+    audio, candidate_segments, fs_audio=FS_AUDIO, t_dedup=0.23, t_bout=0.55
+):
     """
     Post-process merged candidate segments using Cough-E-style peak refinement.
 
@@ -165,7 +208,8 @@ def refine_cough_events(audio, candidate_segments, fs_audio=FS_AUDIO,
         return []
 
     _, _, starts_idx, ends_idx, _, peak_locs_idx = segment_cough(
-        audio, fs_audio,
+        audio,
+        fs_audio,
         cough_padding=0.1,
         min_cough_len=0.1,
         th_l_multiplier=0.1,

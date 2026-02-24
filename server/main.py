@@ -4,6 +4,7 @@ import pickle
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,8 +14,10 @@ import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
 )
 log = logging.getLogger("server")
@@ -27,6 +30,7 @@ from predict import (
     sliding_window_predict,
     merge_detections,
     refine_cough_events,
+    create_dummy_audio,
     create_dummy_imu,
 )
 
@@ -86,6 +90,25 @@ async def lifespan(app: FastAPI):
         list(model_data.keys()),
         model_data.get("threshold"),
     )
+    model = model_data.get("model")
+    if hasattr(model, "set_params"):
+        model.set_params(n_jobs=1, nthread=1)
+        log.info("Capped XGBoost threads: n_jobs=1 nthread=1")
+    warmup_start = time.perf_counter()
+    warmup_duration = 1.0
+    warmup_audio = create_dummy_audio(warmup_duration)
+    warmup_imu = create_dummy_imu(warmup_duration)
+    sliding_window_predict(
+        warmup_audio,
+        warmup_imu,
+        model_data,
+        modality="audio",
+        window_len=0.4,
+        hop_size=0.05,
+        threshold=model_data.get("threshold", 0.5),
+    )
+    warmup_ms = (time.perf_counter() - warmup_start) * 1000
+    log.info("Warmup inference complete (%.1f ms)", warmup_ms)
     yield
     model_data.clear()
 
@@ -111,13 +134,17 @@ async def predict(audio: UploadFile):
         "Received file: name=%s content_type=%s", audio.filename, audio.content_type
     )
     try:
+        request_start = time.perf_counter()
         audio_bytes = await audio.read()
+        read_ms = (time.perf_counter() - request_start) * 1000
         log.debug("Read %d bytes", len(audio_bytes))
 
         if not audio_bytes:
             raise HTTPException(status_code=400, detail="Empty audio upload")
 
+        decode_start = time.perf_counter()
         y = load_audio_bytes(audio_bytes, sr=FS_AUDIO)
+        decode_ms = (time.perf_counter() - decode_start) * 1000
         if y.size == 0:
             raise HTTPException(
                 status_code=400,
@@ -132,6 +159,7 @@ async def predict(audio: UploadFile):
         dummy_imu = create_dummy_imu(duration)
 
         threshold = model_data.get("threshold", 0.5)
+        predict_start = time.perf_counter()
         raw_preds, all_probs, window_times, _ = sliding_window_predict(
             y,
             dummy_imu,
@@ -141,6 +169,7 @@ async def predict(audio: UploadFile):
             hop_size=0.05,
             threshold=threshold,
         )
+        predict_ms = (time.perf_counter() - predict_start) * 1000
         log.debug(
             "Built %d windows, %d above threshold", len(all_probs), len(raw_preds)
         )
@@ -155,8 +184,10 @@ async def predict(audio: UploadFile):
                 "probabilities": [],
             }
 
+        post_start = time.perf_counter()
         candidate_segments = merge_detections(raw_preds, gap_threshold=0.5)
         predictions = refine_cough_events(y, candidate_segments)
+        post_ms = (time.perf_counter() - post_start) * 1000
 
         start_times = [round(s, 3) for s, e, p in predictions]
         end_times = [round(e, 3) for s, e, p in predictions]
@@ -165,6 +196,15 @@ async def predict(audio: UploadFile):
             "Detected %d cough event(s): %s",
             len(start_times),
             list(zip(start_times, end_times)),
+        )
+        total_ms = (time.perf_counter() - request_start) * 1000
+        log.info(
+            "Timing (ms): read=%.1f decode=%.1f predict=%.1f post=%.1f total=%.1f",
+            read_ms,
+            decode_ms,
+            predict_ms,
+            post_ms,
+            total_ms,
         )
 
         return {
