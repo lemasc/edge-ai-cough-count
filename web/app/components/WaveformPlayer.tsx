@@ -4,13 +4,13 @@ import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
 
 type WaveformPlayerProps = {
-  audioBlob: Blob;
+  src: string;
   startTimes: number[];
   endTimes: number[];
 };
 
 export function WaveformPlayer({
-  audioBlob,
+  src,
   startTimes,
   endTimes,
 }: WaveformPlayerProps) {
@@ -28,7 +28,7 @@ export function WaveformPlayer({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const url = URL.createObjectURL(audioBlob);
+    const url = src;
     const wsRegions = RegionsPlugin.create();
     regionsRef.current = wsRegions;
 
@@ -88,7 +88,6 @@ export function WaveformPlayer({
     return () => {
       destroyed = true;
       ws.destroy();
-      URL.revokeObjectURL(url);
       setIsReady(false);
       setIsPlaying(false);
       setError(null);
@@ -97,7 +96,7 @@ export function WaveformPlayer({
       setCurrentTime(0);
       setDuration(0);
     };
-  }, [audioBlob, startTimes, endTimes]);
+  }, [src, startTimes, endTimes]);
 
   useEffect(() => {
     if (isReady) {

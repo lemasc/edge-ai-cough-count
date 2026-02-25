@@ -1,0 +1,205 @@
+import { useEffect, useState } from 'react';
+import { redirect, useNavigation, useSubmit, useNavigate } from 'react-router';
+import type { Route } from './+types/record';
+import { getDb } from '~/db';
+import * as schema from '~/db/schema';
+import { eq } from 'drizzle-orm';
+import { useAudioRecorder } from '~/hooks/useAudioRecorder';
+import { PermissionScreen } from '~/components/PermissionScreen';
+import { RecordingScreen } from '~/components/RecordingScreen';
+import type { PredictionResult } from '~/types';
+
+function mimeToExt(mimeType: string): string {
+  if (mimeType.includes('mp4')) return 'mp4';
+  if (mimeType.includes('ogg')) return 'ogg';
+  return 'webm';
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const { env } = context.cloudflare;
+  const db = getDb(env.DB);
+
+  const formData = await request.formData();
+  const audio = formData.get('audio') as File;
+  const durationMs = parseInt(formData.get('durationMs') as string, 10);
+
+  const id = crypto.randomUUID();
+  const ext = mimeToExt(audio.type);
+  const audioKey = `recordings/${id}/audio.${ext}`;
+
+  await db.insert(schema.recordings).values({
+    id,
+    createdAt: new Date(),
+    durationMs,
+    audioKey,
+    status: 'pending',
+  });
+
+  const buffer = await audio.arrayBuffer();
+
+  await env.STORAGE.put(audioKey, buffer, {
+    httpMetadata: { contentType: audio.type },
+  });
+
+  try {
+    const predictFormData = new FormData();
+    predictFormData.append(
+      'audio',
+      new Blob([buffer], { type: audio.type }),
+      `recording.${ext}`,
+    );
+
+    const response = await fetch(`${env.PREDICT_API_URL}/api/predict`, {
+      method: 'POST',
+      body: predictFormData,
+    });
+
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+    const prediction = (await response.json()) as PredictionResult;
+
+    await db
+      .update(schema.recordings)
+      .set({
+        status: 'done',
+        coughCount: prediction.cough_count,
+        startTimes: JSON.stringify(prediction.start_times),
+        endTimes: JSON.stringify(prediction.end_times),
+        windowTimes: JSON.stringify(prediction.window_times),
+        probabilities: JSON.stringify(prediction.probabilities),
+      })
+      .where(eq(schema.recordings.id, id));
+  } catch (err) {
+    await db
+      .update(schema.recordings)
+      .set({
+        status: 'error',
+        errorMessage: err instanceof Error ? err.message : 'Unknown error',
+      })
+      .where(eq(schema.recordings.id, id));
+  }
+
+  return redirect(`/r/${id}`);
+}
+
+export function HydrateFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-950">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
+    </div>
+  );
+}
+
+export default function RecordRoute() {
+  const [phase, setPhase] = useState<'init' | 'ready' | 'recording' | 'stopped'>('init');
+  const [startTime, setStartTime] = useState(0);
+  const [stoppedResult, setStoppedResult] = useState<{
+    durationMs: number;
+    audioBlob: Blob;
+  } | null>(null);
+
+  const audio = useAudioRecorder();
+  const navigate = useNavigate();
+  const navigation = useNavigation();
+  const submit = useSubmit();
+
+  useEffect(() => {
+    void audio.requestPermission().then((result) => {
+      if (result === 'denied') {
+        void navigate('/');
+      } else {
+        setPhase('ready');
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleBeginRecording = () => {
+    const t = performance.now();
+    audio.startRecording();
+    setStartTime(t);
+    setPhase('recording');
+  };
+
+  const handleStop = () => {
+    void audio.stopRecording().then((blob) => {
+      const ms = performance.now() - startTime;
+      setStoppedResult({ durationMs: ms, audioBlob: blob });
+      setPhase('stopped');
+    });
+  };
+
+  const handlePredict = () => {
+    if (!stoppedResult) return;
+    const { audioBlob, durationMs } = stoppedResult;
+    const ext = mimeToExt(audio.getMimeType());
+    const fd = new FormData();
+    fd.append('audio', audioBlob, `recording.${ext}`);
+    fd.append('durationMs', String(durationMs));
+    submit(fd, { method: 'post', encType: 'multipart/form-data' });
+  };
+
+  if (navigation.state !== 'idle') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-6 py-12 text-white">
+        <div className="w-full max-w-sm space-y-6 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
+            <p className="text-lg font-semibold">Analyzing audio…</p>
+            {stoppedResult && (
+              <p className="text-sm text-gray-500">
+                Duration:{' '}
+                {String(Math.floor(stoppedResult.durationMs / 60000)).padStart(2, '0')}:
+                {String(Math.floor((stoppedResult.durationMs % 60000) / 1000)).padStart(2, '0')}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'init') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-950">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
+      </div>
+    );
+  }
+
+  if (phase === 'ready') {
+    return (
+      <PermissionScreen
+        phase="ready"
+        permissions={{ audio: 'granted' }}
+        onStart={() => {}}
+        onBeginRecording={handleBeginRecording}
+      />
+    );
+  }
+
+  if (phase === 'recording') {
+    return (
+      <RecordingScreen
+        phase="recording"
+        startTime={startTime}
+        onStop={handleStop}
+        onPredict={() => {}}
+      />
+    );
+  }
+
+  if (phase === 'stopped') {
+    return (
+      <RecordingScreen
+        phase="stopped"
+        startTime={0}
+        durationMs={stoppedResult?.durationMs}
+        onStop={() => {}}
+        onPredict={handlePredict}
+      />
+    );
+  }
+
+  return null;
+}

@@ -28,11 +28,6 @@ export const TRIAL_OPTIONS: { value: Trial; label: string }[] = [
   { value: '3', label: 'Trial 3' },
 ];
 
-export type RecordingResult = {
-  audioBlob: Blob;
-  durationMs: number;
-};
-
 export type PredictionResult = {
   start_times: number[];
   end_times: number[];
@@ -52,13 +47,3 @@ export type RecordingLabel = {
 export type PermissionStatus = {
   audio: 'unknown' | 'granted' | 'denied' | 'unavailable';
 };
-
-export type AppState =
-  | { phase: 'idle' }
-  | { phase: 'requesting-permissions' }
-  | { phase: 'ready'; permissions: PermissionStatus }
-  | { phase: 'recording'; startTime: number; permissions: PermissionStatus }
-  | { phase: 'stopped'; result: RecordingResult; permissions: PermissionStatus }
-  | { phase: 'predicting'; result: RecordingResult }
-  | { phase: 'results'; result: RecordingResult; prediction: PredictionResult }
-  | { phase: 'labeling'; result: RecordingResult; prediction: PredictionResult };

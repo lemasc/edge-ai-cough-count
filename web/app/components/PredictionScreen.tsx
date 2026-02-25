@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import type { PredictionResult } from "../types";
 import { WaveformPlayer } from "./WaveformPlayer";
 import { formatSeconds } from "../utils/formatTime";
@@ -8,15 +9,13 @@ type Props =
       durationMs: number;
       prediction?: undefined;
       onReset: () => void;
-      onLabel: () => void;
     }
   | {
       phase: "results";
       durationMs: number;
-      audioBlob: Blob;
+      audioSrc: string;
       prediction: PredictionResult;
       onReset: () => void;
-      onLabel: () => void;
     };
 
 function formatDuration(ms: number): string {
@@ -43,7 +42,7 @@ export function PredictionScreen(props: Props) {
     );
   }
 
-  const { audioBlob, prediction, onReset, onLabel } = props;
+  const { audioSrc, prediction, onReset } = props;
   const { cough_count, start_times, end_times } = prediction;
 
   return (
@@ -59,7 +58,7 @@ export function PredictionScreen(props: Props) {
         </div>
 
         <WaveformPlayer
-          audioBlob={audioBlob}
+          src={audioSrc}
           startTimes={start_times}
           endTimes={end_times}
         />
@@ -89,12 +88,12 @@ export function PredictionScreen(props: Props) {
         )}
 
         <div className="space-y-3">
-          <button
-            onClick={onLabel}
-            className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
+          <Link
+            to="/complete"
+            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
           >
-            Label &amp; Save
-          </button>
+            Done
+          </Link>
           <button
             onClick={onReset}
             className="min-h-12 w-full rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
