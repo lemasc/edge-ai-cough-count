@@ -44,14 +44,11 @@ export function HydrateFallback() {
 }
 
 export default function RecordRoute() {
-  const [phase, setPhase] = useState<
-    "idle" | "countdown" | "recording" | "stopped"
-  >("idle");
+  const [phase, setPhase] = useState<"idle" | "countdown" | "recording">(
+    "idle",
+  );
   const [startTime, setStartTime] = useState(0);
-  const [stoppedResult, setStoppedResult] = useState<{
-    durationMs: number;
-    audioBlob: Blob;
-  } | null>(null);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
 
   const audio = useAudioRecorder();
   const navigation = useNavigation();
@@ -71,19 +68,13 @@ export default function RecordRoute() {
   const handleStop = () => {
     void audio.stopRecording().then((blob) => {
       const ms = performance.now() - startTime;
-      setStoppedResult({ durationMs: ms, audioBlob: blob });
-      setPhase("stopped");
+      setDurationMs(ms);
+      const ext = mimeToExt(audio.getMimeType());
+      const fd = new FormData();
+      fd.append("audio", blob, `recording.${ext}`);
+      fd.append("durationMs", String(ms));
+      submit(fd, { method: "post", encType: "multipart/form-data" });
     });
-  };
-
-  const handlePredict = () => {
-    if (!stoppedResult) return;
-    const { audioBlob, durationMs } = stoppedResult;
-    const ext = mimeToExt(audio.getMimeType());
-    const fd = new FormData();
-    fd.append("audio", audioBlob, `recording.${ext}`);
-    fd.append("durationMs", String(durationMs));
-    submit(fd, { method: "post", encType: "multipart/form-data" });
   };
 
   if (navigation.state !== "idle") {
@@ -92,17 +83,11 @@ export default function RecordRoute() {
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
           <p className="text-lg font-semibold">Analyzing audio…</p>
-          {stoppedResult && (
+          {durationMs != null && (
             <p className="text-sm text-gray-500">
               Duration:{" "}
-              {String(Math.floor(stoppedResult.durationMs / 60000)).padStart(
-                2,
-                "0",
-              )}
-              :
-              {String(
-                Math.floor((stoppedResult.durationMs % 60000) / 1000),
-              ).padStart(2, "0")}
+              {String(Math.floor(durationMs / 60000)).padStart(2, "0")}:
+              {String(Math.floor((durationMs % 60000) / 1000)).padStart(2, "0")}
             </p>
           )}
         </div>
@@ -119,30 +104,12 @@ export default function RecordRoute() {
     );
   }
 
-  if (phase === "countdown" || phase === "recording") {
-    return (
-      <RecordingScreen
-        phase={phase}
-        startTime={startTime}
-        onCountdownEnd={handleCountdownEnd}
-        onStop={handleStop}
-        onPredict={() => {}}
-      />
-    );
-  }
-
-  if (phase === "stopped") {
-    return (
-      <RecordingScreen
-        phase="stopped"
-        startTime={0}
-        durationMs={stoppedResult?.durationMs}
-        onCountdownEnd={() => {}}
-        onStop={() => {}}
-        onPredict={handlePredict}
-      />
-    );
-  }
-
-  return null;
+  return (
+    <RecordingScreen
+      phase={phase}
+      startTime={startTime}
+      onCountdownEnd={handleCountdownEnd}
+      onStop={handleStop}
+    />
+  );
 }

@@ -4,12 +4,10 @@ const MAX_DURATION_MS = 10_000;
 const COUNTDOWN_SECONDS = 3;
 
 type Props = {
-  phase: "countdown" | "recording" | "stopped";
+  phase: "countdown" | "recording";
   startTime: number;
-  durationMs?: number;
   onCountdownEnd: () => void;
   onStop: () => void;
-  onPredict: () => void;
 };
 
 function formatTime(ms: number): string {
@@ -22,10 +20,8 @@ function formatTime(ms: number): string {
 export function RecordingScreen({
   phase,
   startTime,
-  durationMs,
   onCountdownEnd,
   onStop,
-  onPredict,
 }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
@@ -63,8 +59,6 @@ export function RecordingScreen({
     return () => clearInterval(id);
   }, [phase, startTime, onStop]);
 
-  const displayMs =
-    phase === "stopped" && durationMs != null ? durationMs : elapsed;
   const progress = Math.min((elapsed / MAX_DURATION_MS) * 100, 100);
 
   return (
@@ -90,7 +84,7 @@ export function RecordingScreen({
               </span>
             </div>
             <div className="font-mono text-6xl font-bold tabular-nums">
-              {formatTime(displayMs)}
+              {formatTime(elapsed)}
             </div>
             <div className="space-y-1">
               <div className="h-2 w-full overflow-hidden rounded-full bg-gray-700">
@@ -105,20 +99,6 @@ export function RecordingScreen({
             </div>
           </>
         )}
-
-        {phase === "stopped" && (
-          <>
-            <div className="flex items-center justify-center gap-3">
-              <span className="inline-block h-4 w-4 rounded-full bg-gray-500" />
-              <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">
-                Stopped
-              </span>
-            </div>
-            <div className="font-mono text-6xl font-bold tabular-nums">
-              {formatTime(displayMs)}
-            </div>
-          </>
-        )}
       </div>
 
       {phase === "recording" && (
@@ -129,25 +109,6 @@ export function RecordingScreen({
         >
           Stop
         </button>
-      )}
-
-      {phase === "stopped" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-300">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Duration</span>
-              <span className="font-mono">{formatTime(durationMs ?? 0)}</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onPredict}
-            className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
-          >
-            Analyze
-          </button>
-        </div>
       )}
     </div>
   );
