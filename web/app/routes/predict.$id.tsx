@@ -5,12 +5,7 @@ import { getDb } from "~/db";
 import * as schema from "~/db/schema";
 import { eq } from "drizzle-orm";
 import type { PredictionResult } from "~/types";
-
-function mimeToExt(mimeType: string): string {
-  if (mimeType.includes("mp4")) return "mp4";
-  if (mimeType.includes("ogg")) return "ogg";
-  return "webm";
-}
+import { mimeToExt } from "~/utils/audio";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
   const db = getDb(context.cloudflare.env.DB);
@@ -94,12 +89,10 @@ export default function PredictRoute({ loaderData }: Route.ComponentProps) {
 
   if (navigation.state !== "idle") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-6 py-12 text-white">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
-            <p className="text-lg font-semibold">Analyzing audio…</p>
-          </div>
+      <div className="w-full max-w-sm space-y-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
+          <p className="text-lg font-semibold">Analyzing audio…</p>
         </div>
       </div>
     );
@@ -107,46 +100,42 @@ export default function PredictRoute({ loaderData }: Route.ComponentProps) {
 
   if (recording.status === "error") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-6 py-12 text-white">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <p className="text-lg font-semibold text-red-400">Analysis failed</p>
-          {recording.errorMessage && (
-            <p className="text-sm text-gray-500">{recording.errorMessage}</p>
-          )}
-          <div className="space-y-3">
-            <Form method="post">
-              <button
-                type="submit"
-                className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
-              >
-                Retry Analysis
-              </button>
-            </Form>
-            <Link
-              to="/record"
-              className="block min-h-12 w-full rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+      <div className="w-full max-w-sm space-y-6 text-center">
+        <p className="text-lg font-semibold text-red-400">Analysis failed</p>
+        {recording.errorMessage && (
+          <p className="text-sm text-gray-500">{recording.errorMessage}</p>
+        )}
+        <div className="space-y-3">
+          <Form method="post">
+            <button
+              type="submit"
+              className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
             >
-              Record Again
-            </Link>
-          </div>
+              Retry Analysis
+            </button>
+          </Form>
+          <Link
+            to="/record"
+            className="block min-h-12 w-full rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+          >
+            Record Again
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-6 py-12 text-white">
-      <div className="w-full max-w-sm space-y-6 text-center">
-        <p className="text-lg font-semibold">Ready to analyze</p>
-        <Form method="post">
-          <button
-            type="submit"
-            className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
-          >
-            Start Analysis
-          </button>
-        </Form>
-      </div>
+    <div className="w-full max-w-sm space-y-6 text-center">
+      <p className="text-lg font-semibold">Ready to analyze</p>
+      <Form method="post">
+        <button
+          type="submit"
+          className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
+        >
+          Start Analysis
+        </button>
+      </Form>
     </div>
   );
 }

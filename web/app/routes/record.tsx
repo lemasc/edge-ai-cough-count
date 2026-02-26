@@ -1,25 +1,20 @@
-import { useEffect, useState } from 'react';
-import { redirect, useNavigation, useSubmit, useNavigate } from 'react-router';
-import type { Route } from './+types/record';
-import { getDb } from '~/db';
-import * as schema from '~/db/schema';
-import { useAudioRecorder } from '~/hooks/useAudioRecorder';
-import { PermissionScreen } from '~/components/PermissionScreen';
-import { RecordingScreen } from '~/components/RecordingScreen';
-
-function mimeToExt(mimeType: string): string {
-  if (mimeType.includes('mp4')) return 'mp4';
-  if (mimeType.includes('ogg')) return 'ogg';
-  return 'webm';
-}
+import { useEffect, useState } from "react";
+import { redirect, useNavigation, useSubmit, useNavigate } from "react-router";
+import type { Route } from "./+types/record";
+import { getDb } from "~/db";
+import * as schema from "~/db/schema";
+import { useAudioRecorder } from "~/hooks/useAudioRecorder";
+import { PermissionScreen } from "~/components/PermissionScreen";
+import { RecordingScreen } from "~/components/RecordingScreen";
+import { mimeToExt } from "~/utils/audio";
 
 export async function action({ request, context }: Route.ActionArgs) {
   const { env } = context.cloudflare;
   const db = getDb(env.DB);
 
   const formData = await request.formData();
-  const audio = formData.get('audio') as File;
-  const durationMs = parseInt(formData.get('durationMs') as string, 10);
+  const audio = formData.get("audio") as File;
+  const durationMs = parseInt(formData.get("durationMs") as string, 10);
 
   const id = crypto.randomUUID();
   const ext = mimeToExt(audio.type);
@@ -30,7 +25,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     createdAt: new Date(),
     durationMs,
     audioKey,
-    status: 'pending',
+    status: "pending",
   });
 
   const buffer = await audio.arrayBuffer();
@@ -44,14 +39,14 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export function HydrateFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-950">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
-    </div>
+    <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
   );
 }
 
 export default function RecordRoute() {
-  const [phase, setPhase] = useState<'init' | 'ready' | 'recording' | 'stopped'>('init');
+  const [phase, setPhase] = useState<
+    "init" | "ready" | "recording" | "stopped"
+  >("init");
   const [startTime, setStartTime] = useState(0);
   const [stoppedResult, setStoppedResult] = useState<{
     durationMs: number;
@@ -65,27 +60,26 @@ export default function RecordRoute() {
 
   useEffect(() => {
     void audio.requestPermission().then((result) => {
-      if (result === 'denied') {
-        void navigate('/');
+      if (result === "denied") {
+        void navigate("/");
       } else {
-        setPhase('ready');
+        setPhase("ready");
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [audio, navigate]);
 
   const handleBeginRecording = () => {
     const t = performance.now();
     audio.startRecording();
     setStartTime(t);
-    setPhase('recording');
+    setPhase("recording");
   };
 
   const handleStop = () => {
     void audio.stopRecording().then((blob) => {
       const ms = performance.now() - startTime;
       setStoppedResult({ durationMs: ms, audioBlob: blob });
-      setPhase('stopped');
+      setPhase("stopped");
     });
   };
 
@@ -94,51 +88,53 @@ export default function RecordRoute() {
     const { audioBlob, durationMs } = stoppedResult;
     const ext = mimeToExt(audio.getMimeType());
     const fd = new FormData();
-    fd.append('audio', audioBlob, `recording.${ext}`);
-    fd.append('durationMs', String(durationMs));
-    submit(fd, { method: 'post', encType: 'multipart/form-data' });
+    fd.append("audio", audioBlob, `recording.${ext}`);
+    fd.append("durationMs", String(durationMs));
+    submit(fd, { method: "post", encType: "multipart/form-data" });
   };
 
-  if (navigation.state !== 'idle') {
+  if (navigation.state !== "idle") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-6 py-12 text-white">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
-            <p className="text-lg font-semibold">Analyzing audio…</p>
-            {stoppedResult && (
-              <p className="text-sm text-gray-500">
-                Duration:{' '}
-                {String(Math.floor(stoppedResult.durationMs / 60000)).padStart(2, '0')}:
-                {String(Math.floor((stoppedResult.durationMs % 60000) / 1000)).padStart(2, '0')}
-              </p>
-            )}
-          </div>
+      <div className="w-full max-w-sm space-y-6 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
+          <p className="text-lg font-semibold">Analyzing audio…</p>
+          {stoppedResult && (
+            <p className="text-sm text-gray-500">
+              Duration:{" "}
+              {String(Math.floor(stoppedResult.durationMs / 60000)).padStart(
+                2,
+                "0",
+              )}
+              :
+              {String(
+                Math.floor((stoppedResult.durationMs % 60000) / 1000),
+              ).padStart(2, "0")}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  if (phase === 'init') {
+  if (phase === "init") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
-      </div>
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
     );
   }
 
-  if (phase === 'ready') {
+  if (phase === "ready") {
     return (
       <PermissionScreen
         phase="ready"
-        permissions={{ audio: 'granted' }}
+        permissions={{ audio: "granted" }}
         onStart={() => {}}
         onBeginRecording={handleBeginRecording}
       />
     );
   }
 
-  if (phase === 'recording') {
+  if (phase === "recording") {
     return (
       <RecordingScreen
         phase="recording"
@@ -149,7 +145,7 @@ export default function RecordRoute() {
     );
   }
 
-  if (phase === 'stopped') {
+  if (phase === "stopped") {
     return (
       <RecordingScreen
         phase="stopped"
