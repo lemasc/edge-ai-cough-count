@@ -77,6 +77,11 @@ export default function RecordRoute() {
     });
   };
 
+  const handleCancel = () => {
+    void audio.stopRecording();
+    setPhase("idle");
+  };
+
   if (navigation.state !== "idle") {
     return (
       <div className="w-full max-w-sm space-y-6 text-center">
@@ -110,6 +115,7 @@ export default function RecordRoute() {
       startTime={startTime}
       onCountdownEnd={handleCountdownEnd}
       onStop={handleStop}
+      onCancel={handleCancel}
     />
   );
 }

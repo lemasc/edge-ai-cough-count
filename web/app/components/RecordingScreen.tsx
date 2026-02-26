@@ -8,6 +8,7 @@ type Props = {
   startTime: number;
   onCountdownEnd: () => void;
   onStop: () => void;
+  onCancel: () => void;
 };
 
 function formatTime(ms: number): string {
@@ -22,6 +23,7 @@ export function RecordingScreen({
   startTime,
   onCountdownEnd,
   onStop,
+  onCancel,
 }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
@@ -100,16 +102,24 @@ export function RecordingScreen({
           </>
         )}
       </div>
-
-      {phase === "recording" && (
+      <div className="space-y-3">
+        {phase === "recording" && (
+          <button
+            type="button"
+            onClick={onStop}
+            className="min-h-12 w-full rounded-xl bg-red-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-red-500 active:scale-95"
+          >
+            Stop
+          </button>
+        )}
         <button
           type="button"
-          onClick={onStop}
-          className="min-h-12 w-full rounded-xl bg-red-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-red-500 active:scale-95"
+          onClick={onCancel}
+          className="text-sm w-full min-h-12 border border-gray-600 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 transition"
         >
-          Stop
+          Cancel
         </button>
-      )}
+      </div>
     </div>
   );
 }
