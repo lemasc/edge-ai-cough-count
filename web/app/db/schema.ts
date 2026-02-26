@@ -4,7 +4,7 @@ export const recordings = sqliteTable("recordings", {
   id: text("id").primaryKey(),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   durationMs: integer("duration_ms"),
-  audioKey: text("audio_key"),
+  audioKey: text("audio_key").notNull(),
   status: text("status", { enum: ["pending", "done", "error"] })
     .notNull()
     .default("pending"),

@@ -9,7 +9,9 @@
     "dev": "react-router dev",
     "postinstall": "npm run cf-typegen",
     "preview": "pnpm run build && vite preview",
-    "typecheck": "npm run cf-typegen && react-router typegen && tsc -b"
+    "typecheck": "pnpm run cf-typegen && react-router typegen && tsc -b",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply coughsense"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
