@@ -1,10 +1,9 @@
+import { useState } from "react";
 import type { PermissionStatus } from "../types";
 
 type Props = {
-  phase: "idle" | "requesting-permissions" | "ready";
-  permissions?: PermissionStatus;
-  onStart: () => void;
-  onBeginRecording: () => void;
+  requestPermission: () => Promise<"granted" | "denied">;
+  onBeginRecording?: () => void;
 };
 
 type BadgeStatus = "unknown" | "granted" | "denied" | "unavailable";
@@ -50,11 +49,48 @@ function StatusBadge({
 }
 
 export function PermissionScreen({
-  phase,
-  permissions,
-  onStart,
+  requestPermission,
   onBeginRecording,
 }: Props) {
+  const [phase, setPhase] = useState<
+    "idle" | "requesting-permissions" | "ready"
+  >("idle");
+  const [permissions, setPermissions] = useState<PermissionStatus>({
+    audio: "unknown",
+  });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const showBeginRecording = phase === "ready" && Boolean(onBeginRecording);
+  const showPermissions = phase !== "idle" || permissions.audio !== "unknown";
+
+  const handleStart = () => {
+    setErrorMessage(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermissions({ audio: "unavailable" });
+      setErrorMessage(
+        "Microphone access isn't supported in this browser. Please try a different browser.",
+      );
+      setPhase("idle");
+      return;
+    }
+
+    setPhase("requesting-permissions");
+    void requestPermission().then((result) => {
+      if (result === "granted") {
+        setPermissions({ audio: "granted" });
+        setPhase("ready");
+        return;
+      }
+
+      setPermissions({ audio: "denied" });
+      setErrorMessage(
+        "Microphone access denied. Please allow access in your browser settings and try again.",
+      );
+      setPhase("idle");
+    });
+  };
+
   return (
     <div className="w-full max-w-sm space-y-8">
       <div className="text-center">
@@ -65,13 +101,16 @@ export function PermissionScreen({
         </p>
       </div>
 
-      {phase !== "idle" && permissions && (
+      {showPermissions && (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
             Permissions
           </p>
           <StatusBadge status={permissions.audio} label="Microphone" />
-          {permissions.audio === "denied" && (
+          {errorMessage && (
+            <p className="text-xs text-red-400">{errorMessage}</p>
+          )}
+          {!errorMessage && permissions.audio === "denied" && (
             <p className="text-xs text-red-400">
               Microphone access denied. Please allow in browser settings and
               reload.
@@ -83,10 +122,10 @@ export function PermissionScreen({
       {phase === "idle" && (
         <button
           type="button"
-          onClick={onStart}
+          onClick={handleStart}
           className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
         >
-          Start
+          Request Microphone Access
         </button>
       )}
 
@@ -100,7 +139,7 @@ export function PermissionScreen({
         </button>
       )}
 
-      {phase === "ready" && permissions && (
+      {showBeginRecording && (
         <button
           type="button"
           onClick={onBeginRecording}

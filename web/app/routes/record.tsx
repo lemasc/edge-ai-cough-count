@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { redirect, useNavigation, useSubmit, useNavigate } from "react-router";
+import { useState } from "react";
+import { redirect, useNavigation, useSubmit } from "react-router";
 import type { Route } from "./+types/record";
 import { getDb } from "~/db";
 import * as schema from "~/db/schema";
@@ -44,9 +44,7 @@ export function HydrateFallback() {
 }
 
 export default function RecordRoute() {
-  const [phase, setPhase] = useState<
-    "init" | "ready" | "recording" | "stopped"
-  >("init");
+  const [phase, setPhase] = useState<"idle" | "recording" | "stopped">("idle");
   const [startTime, setStartTime] = useState(0);
   const [stoppedResult, setStoppedResult] = useState<{
     durationMs: number;
@@ -54,19 +52,8 @@ export default function RecordRoute() {
   } | null>(null);
 
   const audio = useAudioRecorder();
-  const navigate = useNavigate();
   const navigation = useNavigation();
   const submit = useSubmit();
-
-  useEffect(() => {
-    void audio.requestPermission().then((result) => {
-      if (result === "denied") {
-        void navigate("/");
-      } else {
-        setPhase("ready");
-      }
-    });
-  }, [audio, navigate]);
 
   const handleBeginRecording = () => {
     const t = performance.now();
@@ -117,18 +104,10 @@ export default function RecordRoute() {
     );
   }
 
-  if (phase === "init") {
-    return (
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
-    );
-  }
-
-  if (phase === "ready") {
+  if (phase === "idle") {
     return (
       <PermissionScreen
-        phase="ready"
-        permissions={{ audio: "granted" }}
-        onStart={() => {}}
+        requestPermission={audio.requestPermission}
         onBeginRecording={handleBeginRecording}
       />
     );
