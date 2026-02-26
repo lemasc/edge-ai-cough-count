@@ -3,11 +3,9 @@ import { redirect, useNavigation, useSubmit, useNavigate } from 'react-router';
 import type { Route } from './+types/record';
 import { getDb } from '~/db';
 import * as schema from '~/db/schema';
-import { eq } from 'drizzle-orm';
 import { useAudioRecorder } from '~/hooks/useAudioRecorder';
 import { PermissionScreen } from '~/components/PermissionScreen';
 import { RecordingScreen } from '~/components/RecordingScreen';
-import type { PredictionResult } from '~/types';
 
 function mimeToExt(mimeType: string): string {
   if (mimeType.includes('mp4')) return 'mp4';
@@ -41,45 +39,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     httpMetadata: { contentType: audio.type },
   });
 
-  try {
-    const predictFormData = new FormData();
-    predictFormData.append(
-      'audio',
-      new Blob([buffer], { type: audio.type }),
-      `recording.${ext}`,
-    );
-
-    const response = await fetch(`${env.PREDICT_API_URL}/api/predict`, {
-      method: 'POST',
-      body: predictFormData,
-    });
-
-    if (!response.ok) throw new Error(`Server error: ${response.status}`);
-
-    const prediction = (await response.json()) as PredictionResult;
-
-    await db
-      .update(schema.recordings)
-      .set({
-        status: 'done',
-        coughCount: prediction.cough_count,
-        startTimes: JSON.stringify(prediction.start_times),
-        endTimes: JSON.stringify(prediction.end_times),
-        windowTimes: JSON.stringify(prediction.window_times),
-        probabilities: JSON.stringify(prediction.probabilities),
-      })
-      .where(eq(schema.recordings.id, id));
-  } catch (err) {
-    await db
-      .update(schema.recordings)
-      .set({
-        status: 'error',
-        errorMessage: err instanceof Error ? err.message : 'Unknown error',
-      })
-      .where(eq(schema.recordings.id, id));
-  }
-
-  return redirect(`/results/${id}`);
+  return redirect(`/predict/${id}`);
 }
 
 export function HydrateFallback() {

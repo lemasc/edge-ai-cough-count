@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { Link, redirect } from 'react-router';
 import type { Route } from './+types/results.$id';
 import { getDb } from '~/db';
 import * as schema from '~/db/schema';
@@ -12,30 +12,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     where: eq(schema.recordings.id, params.id),
   });
   if (!recording) throw new Response('Not found', { status: 404 });
+  if (recording.status !== 'done') return redirect(`/predict/${recording.id}`);
   return recording;
 }
 
 export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
   const recording = loaderData;
-
-  if (recording.status === 'error') {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-6 py-12 text-white">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <p className="text-lg font-semibold text-red-400">Analysis failed</p>
-          {recording.errorMessage && (
-            <p className="text-sm text-gray-500">{recording.errorMessage}</p>
-          )}
-          <Link
-            to="/record"
-            className="block min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
-          >
-            Try Again
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const startTimes = JSON.parse(recording.startTimes ?? '[]') as number[];
   const endTimes = JSON.parse(recording.endTimes ?? '[]') as number[];
