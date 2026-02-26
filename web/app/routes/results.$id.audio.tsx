@@ -1,4 +1,4 @@
-import type { Route } from './+types/r.$id.audio';
+import type { Route } from './+types/results.$id.audio';
 import { getDb } from '~/db';
 import * as schema from '~/db/schema';
 import { eq } from 'drizzle-orm';

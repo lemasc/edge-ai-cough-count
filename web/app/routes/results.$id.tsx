@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import type { Route } from './+types/r.$id';
+import type { Route } from './+types/results.$id';
 import { getDb } from '~/db';
 import * as schema from '~/db/schema';
 import { eq } from 'drizzle-orm';
@@ -52,7 +52,7 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
         </div>
 
         <WaveformPlayer
-          src={`/r/${recording.id}/audio`}
+          src={`/results/${recording.id}/audio`}
           startTimes={startTimes}
           endTimes={endTimes}
         />

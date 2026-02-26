@@ -79,7 +79,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       .where(eq(schema.recordings.id, id));
   }
 
-  return redirect(`/r/${id}`);
+  return redirect(`/results/${id}`);
 }
 
 export function HydrateFallback() {
