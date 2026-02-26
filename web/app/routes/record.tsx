@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { redirect, useNavigation, useSubmit } from "react-router";
-import type { Route } from "./+types/record";
+import { PermissionScreen } from "~/components/PermissionScreen";
+import { RecordingScreen } from "~/components/RecordingScreen";
 import { getDb } from "~/db";
 import * as schema from "~/db/schema";
 import { useAudioRecorder } from "~/hooks/useAudioRecorder";
-import { PermissionScreen } from "~/components/PermissionScreen";
-import { RecordingScreen } from "~/components/RecordingScreen";
 import { mimeToExt } from "~/utils/audio";
+import type { Route } from "./+types/record";
 
 export async function action({ request, context }: Route.ActionArgs) {
   const { env } = context.cloudflare;
@@ -44,7 +44,9 @@ export function HydrateFallback() {
 }
 
 export default function RecordRoute() {
-  const [phase, setPhase] = useState<"idle" | "recording" | "stopped">("idle");
+  const [phase, setPhase] = useState<
+    "idle" | "countdown" | "recording" | "stopped"
+  >("idle");
   const [startTime, setStartTime] = useState(0);
   const [stoppedResult, setStoppedResult] = useState<{
     durationMs: number;
@@ -56,6 +58,10 @@ export default function RecordRoute() {
   const submit = useSubmit();
 
   const handleBeginRecording = () => {
+    setPhase("countdown");
+  };
+
+  const handleCountdownEnd = () => {
     const t = performance.now();
     audio.startRecording();
     setStartTime(t);
@@ -113,11 +119,12 @@ export default function RecordRoute() {
     );
   }
 
-  if (phase === "recording") {
+  if (phase === "countdown" || phase === "recording") {
     return (
       <RecordingScreen
-        phase="recording"
+        phase={phase}
         startTime={startTime}
+        onCountdownEnd={handleCountdownEnd}
         onStop={handleStop}
         onPredict={() => {}}
       />
@@ -130,6 +137,7 @@ export default function RecordRoute() {
         phase="stopped"
         startTime={0}
         durationMs={stoppedResult?.durationMs}
+        onCountdownEnd={() => {}}
         onStop={() => {}}
         onPredict={handlePredict}
       />
