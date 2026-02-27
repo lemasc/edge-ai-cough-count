@@ -8,6 +8,7 @@ import { WaveformPlayer } from "~/components/WaveformPlayer";
 import type { WaveformPlayerHandle } from "~/components/WaveformPlayer";
 import { EvaluationTimeline } from "~/components/EvaluationTimeline";
 import { formatSeconds } from "~/utils/formatTime";
+import { PlayIcon } from "lucide-react";
 
 type EventVerdict = "tp" | "mixed" | "fp";
 
@@ -51,7 +52,11 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   return redirect("/complete");
 }
 
-const VERDICT_OPTIONS: { value: EventVerdict; label: string; active: string }[] = [
+const VERDICT_OPTIONS: {
+  value: EventVerdict;
+  label: string;
+  active: string;
+}[] = [
   { value: "tp", label: "Correct", active: "bg-green-600 text-white" },
   { value: "mixed", label: "Partial", active: "bg-amber-500 text-white" },
   { value: "fp", label: "False Positive", active: "bg-red-600 text-white" },
@@ -89,10 +94,17 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
 
   const startTimes = JSON.parse(recording.startTimes ?? "[]") as number[];
   const endTimes = JSON.parse(recording.endTimes ?? "[]") as number[];
-  const durationSecs = recording.durationMs != null ? recording.durationMs / 1000 : 0;
+  const durationSecs =
+    recording.durationMs != null ? recording.durationMs / 1000 : 0;
 
-  const [detectedEventEvals, setDetectedEventEvals] = useState<DetectedEventEval[]>(
-    () => startTimes.map((s, i) => ({ start: s, end: endTimes[i] ?? s, verdict: "tp" as EventVerdict })),
+  const [detectedEventEvals, setDetectedEventEvals] = useState<
+    DetectedEventEval[]
+  >(() =>
+    startTimes.map((s, i) => ({
+      start: s,
+      end: endTimes[i] ?? s,
+      verdict: "tp" as EventVerdict,
+    })),
   );
   const [missedCoughPoints, setMissedCoughPoints] = useState<number[]>([]);
   const waveformRef = useRef<WaveformPlayerHandle>(null);
@@ -147,18 +159,7 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
                       className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition active:scale-90"
                       aria-label={`Seek to cough ${i + 1}`}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="h-3.5 w-3.5"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
+                      <PlayIcon className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
