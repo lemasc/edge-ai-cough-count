@@ -25,6 +25,8 @@ export function WaveformPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  const HEIGHT = 128;
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -34,7 +36,7 @@ export function WaveformPlayer({
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      height: 128,
+      height: HEIGHT,
       waveColor: "#4B5563",
       progressColor: "#3B82F6",
       cursorColor: "#60A5FA",
@@ -47,20 +49,16 @@ export function WaveformPlayer({
       plugins: [wsRegions],
     });
 
-    wavesurferRef.current = ws;
-
     ws.on("ready", () => {
       const dur = ws.getDuration();
-      const base = Math.ceil(
-        (containerRef.current?.clientWidth ?? 300) / dur,
-      );
+      const base = Math.ceil((containerRef.current?.clientWidth ?? 300) / dur);
       setMinZoom(base);
       setZoom(base);
       setDuration(dur);
       setIsReady(true);
       const regionColors = [
-        "rgba(239, 68, 68, 0.3)",   // red
-        "rgba(234, 179, 8, 0.3)",   // amber
+        "rgba(239, 68, 68, 0.3)", // red
+        "rgba(234, 179, 8, 0.3)", // amber
       ];
       for (let i = 0; i < startTimes.length; i++) {
         wsRegions.addRegion({
@@ -85,9 +83,12 @@ export function WaveformPlayer({
 
     ws.load(url);
 
+    wavesurferRef.current = ws;
+
     return () => {
       destroyed = true;
       ws.destroy();
+      wavesurferRef.current = null;
       setIsReady(false);
       setIsPlaying(false);
       setError(null);
@@ -122,11 +123,16 @@ export function WaveformPlayer({
         {error && (
           <p className="py-4 text-center text-sm text-red-400">{error}</p>
         )}
-        <div ref={containerRef} className={error ? "hidden" : ""} />
+        <div
+          ref={containerRef}
+          className={error ? "hidden" : ""}
+          style={{ minHeight: HEIGHT }}
+        />
       </div>
       <div className="flex justify-end">
         <span className="font-mono text-xs tabular-nums text-gray-500">
-          {isReady ? formatSeconds(currentTime) : "0:00"}{" / "}
+          {isReady ? formatSeconds(currentTime) : "0:00"}
+          {" / "}
           {isReady ? formatSeconds(duration) : "0:00"}
         </span>
       </div>
