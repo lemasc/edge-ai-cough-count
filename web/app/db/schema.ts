@@ -15,3 +15,13 @@ export const recordings = sqliteTable("recordings", {
   probabilities: text("probabilities"), // JSON
   errorMessage: text("error_message"),
 });
+
+export const evaluations = sqliteTable("evaluations", {
+  id: text("id").primaryKey(),
+  recordingId: text("recording_id")
+    .notNull()
+    .references(() => recordings.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  detectedEvents: text("detected_events").notNull(), // JSON: DetectedEventEval[]
+  missedCoughPoints: text("missed_cough_points").notNull(), // JSON: number[]
+});
