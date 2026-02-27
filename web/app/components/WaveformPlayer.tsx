@@ -19,6 +19,11 @@ type WaveformPlayerProps = {
   endTimes: number[];
 };
 
+const regionColors = [
+  "rgba(239, 68, 68, 0.3)", // red
+  "rgba(234, 179, 8, 0.3)", // amber
+];
+
 export const WaveformPlayer = forwardRef<
   WaveformPlayerHandle,
   WaveformPlayerProps
@@ -75,19 +80,6 @@ export const WaveformPlayer = forwardRef<
       setZoom(base);
       setDuration(dur);
       setIsReady(true);
-      const regionColors = [
-        "rgba(239, 68, 68, 0.3)", // red
-        "rgba(234, 179, 8, 0.3)", // amber
-      ];
-      for (let i = 0; i < startTimes.length; i++) {
-        wsRegions.addRegion({
-          start: startTimes[i],
-          end: endTimes[i],
-          color: regionColors[i % 2],
-          drag: false,
-          resize: false,
-        });
-      }
     });
 
     let destroyed = false;
@@ -108,6 +100,7 @@ export const WaveformPlayer = forwardRef<
       destroyed = true;
       ws.destroy();
       wavesurferRef.current = null;
+      regionsRef.current = null;
       setIsReady(false);
       setIsPlaying(false);
       setError(null);
@@ -116,7 +109,38 @@ export const WaveformPlayer = forwardRef<
       setCurrentTime(0);
       setDuration(0);
     };
-  }, [src, startTimes, endTimes]);
+  }, [src]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    const regions = regionsRef.current;
+    if (!regions) return;
+
+    const existing = regions.getRegions();
+
+    // Update existing regions in-place (no DOM removal, no flash)
+    for (let i = 0; i < Math.min(startTimes.length, existing.length); i++) {
+      existing[i].setOptions({
+        start: startTimes[i],
+        end: endTimes[i],
+        color: regionColors[i % 2],
+      });
+    }
+    // Add any new regions beyond what already exists
+    for (let i = existing.length; i < startTimes.length; i++) {
+      regions.addRegion({
+        start: startTimes[i],
+        end: endTimes[i],
+        color: regionColors[i % 2],
+        drag: false,
+        resize: false,
+      });
+    }
+    // Remove surplus regions if count shrank
+    for (let i = startTimes.length; i < existing.length; i++) {
+      existing[i].remove();
+    }
+  }, [startTimes, endTimes, isReady]);
 
   useEffect(() => {
     if (isReady) {
