@@ -70,16 +70,16 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
 
       <div className="space-y-3">
         <Link
-          to="/complete"
+          to={`/evaluate/${recording.id}`}
           className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
         >
-          Done
+          Evaluate Results
         </Link>
         <Link
-          to="/record"
+          to="/complete"
           className="flex min-h-12 w-full items-center justify-center rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
         >
-          Record Another
+          Skip
         </Link>
       </div>
     </div>

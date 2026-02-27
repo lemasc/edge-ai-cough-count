@@ -1,7 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { formatSeconds } from "../utils/formatTime";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
+
+export interface WaveformPlayerHandle {
+  seekTo: (timeSecs: number) => void;
+}
 
 type WaveformPlayerProps = {
   src: string;
@@ -9,11 +19,10 @@ type WaveformPlayerProps = {
   endTimes: number[];
 };
 
-export function WaveformPlayer({
-  src,
-  startTimes,
-  endTimes,
-}: WaveformPlayerProps) {
+export const WaveformPlayer = forwardRef<
+  WaveformPlayerHandle,
+  WaveformPlayerProps
+>(function WaveformPlayer({ src, startTimes, endTimes }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<RegionsPlugin | null>(null);
@@ -24,6 +33,16 @@ export function WaveformPlayer({
   const [minZoom, setMinZoom] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  useImperativeHandle(ref, () => ({
+    seekTo: (timeSecs: number) => {
+      const ws = wavesurferRef.current;
+      if (!ws) return;
+      const dur = ws.getDuration();
+      if (dur <= 0) return;
+      ws.seekTo(timeSecs / dur);
+    },
+  }));
 
   const HEIGHT = 128;
 
@@ -193,4 +212,5 @@ export function WaveformPlayer({
       </button>
     </div>
   );
-}
+});
+WaveformPlayer.displayName = "WaveformPlayer";
