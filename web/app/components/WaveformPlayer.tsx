@@ -17,6 +17,7 @@ import { useTrackedRegions } from "~/hooks/useTrackedRegions";
 export interface WaveformPlayerHandle {
   seekTo: (timeSecs: number) => void;
   playFrom: (timeSecs: number) => void;
+  getCurrentTime: () => number;
 }
 
 type WaveformPlayerProps = {
@@ -26,7 +27,6 @@ type WaveformPlayerProps = {
   height?: number;
   annotating?: boolean;
   pendingAnnotationTime?: number | null;
-  onAnnotate?: (timeSecs: number) => void;
   markerTimes?: number[];
 };
 
@@ -46,7 +46,6 @@ export const WaveformPlayer = forwardRef<
     height = 128,
     annotating = false,
     pendingAnnotationTime = null,
-    onAnnotate,
     markerTimes = [],
   },
   ref,
@@ -61,22 +60,6 @@ export const WaveformPlayer = forwardRef<
   const [minZoom, setMinZoom] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  // CSS pin shown during the 500ms hold as a visual hint (approximate position)
-  const [pendingPinFrac, setPendingPinFrac] = useState<number | null>(null);
-
-  // Refs to avoid stale closures in pointer handlers
-  const annotatingRef = useRef(annotating);
-  const onAnnotateRef = useRef(onAnnotate);
-  const longPressFiredRef = useRef(false);
-  const pendingPinFracRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    annotatingRef.current = annotating;
-  }, [annotating]);
-
-  useEffect(() => {
-    onAnnotateRef.current = onAnnotate;
-  }, [onAnnotate]);
 
   useImperativeHandle(ref, () => ({
     seekTo: (timeSecs: number) => {
@@ -94,6 +77,7 @@ export const WaveformPlayer = forwardRef<
       ws.seekTo(timeSecs / dur);
       ws.play();
     },
+    getCurrentTime: () => wavesurferRef.current?.getCurrentTime() ?? 0,
   }));
 
   useEffect(() => {
@@ -136,14 +120,6 @@ export const WaveformPlayer = forwardRef<
     ws.on("finish", () => setIsPlaying(false));
     ws.on("error", () => {
       if (!destroyed) setError("Could not decode audio");
-    });
-
-    ws.on("interaction", (newTime: number) => {
-      if (annotatingRef.current && longPressFiredRef.current) {
-        longPressFiredRef.current = false;
-        setPendingPinFrac(null);
-        onAnnotateRef.current?.(newTime);
-      }
     });
 
     ws.load(url);
@@ -231,55 +207,6 @@ export const WaveformPlayer = forwardRef<
     wavesurferRef.current?.playPause();
   };
 
-  // Long-press state stored in refs (not state, to avoid re-renders)
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!annotatingRef.current) return;
-    pointerStartRef.current = { x: e.clientX, y: e.clientY };
-    longPressFiredRef.current = false;
-    const rect = e.currentTarget.getBoundingClientRect();
-    pendingPinFracRef.current = (e.clientX - rect.left) / rect.width;
-    longPressTimerRef.current = setTimeout(() => {
-      longPressTimerRef.current = null;
-      longPressFiredRef.current = true;
-      setPendingPinFrac(pendingPinFracRef.current);
-    }, 500);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!pointerStartRef.current) return;
-    const dx = e.clientX - pointerStartRef.current.x;
-    const dy = e.clientY - pointerStartRef.current.y;
-    if (Math.sqrt(dx * dx + dy * dy) > 8) {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      longPressFiredRef.current = false;
-      setPendingPinFrac(null);
-    }
-  };
-
-  const handlePointerUp = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    // longPressFiredRef is intentionally not cleared here — the wavesurfer
-    // 'interaction' event fires after pointerup (on click) and uses it.
-  };
-
-  const handlePointerCancel = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    longPressFiredRef.current = false;
-    setPendingPinFrac(null);
-  };
-
   return (
     <div className="space-y-3">
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -287,10 +214,6 @@ export const WaveformPlayer = forwardRef<
       </p>
       <div
         className={`relative rounded-xl bg-gray-900 px-1 py-2 transition ${annotating ? "ring-2 ring-amber-500" : ""}`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
       >
         {!isReady && !error && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -305,12 +228,6 @@ export const WaveformPlayer = forwardRef<
           className={error ? "hidden" : "select-none"}
           style={{ minHeight: height }}
         />
-        {pendingPinFrac !== null && (
-          <div
-            className="pointer-events-none absolute inset-y-2 w-0.5 -translate-x-1/2 bg-amber-400/60"
-            style={{ left: `${pendingPinFrac * 100}%` }}
-          />
-        )}
       </div>
       <div className="flex justify-end">
         <span className="font-mono text-xs tabular-nums text-gray-500">
