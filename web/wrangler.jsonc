@@ -8,7 +8,8 @@
 	"compatibility_date": "2025-04-04",
 	"main": "./workers/app.ts",
 	"vars": {
-		"PREDICT_API_URL": "https://coughsense-api.makufff.dev"
+		"PREDICT_API_URL": "https://coughsense-api.makufff.dev",
+		"SURVEY_FORM_URL": "https://docs.google.com/forms/d/e/1FAIpQLSdQwrxNiUPpZQI6cCeeTjl8gLWC115Z162XvFyIy57Az4ioVw/viewform?usp=sharing&ouid=109900316583183784170"
 	},
 	"observability": {
 		"enabled": true

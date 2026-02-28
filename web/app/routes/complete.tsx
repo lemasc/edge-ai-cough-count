@@ -1,6 +1,11 @@
 import { Link } from "react-router";
+import type { Route } from "./+types/complete";
 
-export default function CompletePage() {
+export function loader({ context }: Route.LoaderArgs) {
+  return { surveyFormUrl: context.cloudflare.env.SURVEY_FORM_URL };
+}
+
+export default function CompletePage({ loaderData }: Route.ComponentProps) {
   return (
     <div className="w-full max-w-sm space-y-6 text-center">
       <div className="space-y-3">
@@ -10,9 +15,15 @@ export default function CompletePage() {
           Your recording has been uploaded and analyzed.
         </p>
       </div>
+      <a
+        href={loaderData.surveyFormUrl}
+        className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
+      >
+        Complete Survey
+      </a>
       <Link
         to="/"
-        className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
+        className="flex min-h-12 w-full items-center justify-center rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
       >
         Record Another
       </Link>
