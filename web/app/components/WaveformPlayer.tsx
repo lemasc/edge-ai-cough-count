@@ -60,11 +60,14 @@ export const WaveformPlayer = forwardRef<
   const [minZoom, setMinZoom] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  // CSS pin shown during the 500ms hold as a visual hint (approximate position)
+  const [pendingPinFrac, setPendingPinFrac] = useState<number | null>(null);
 
   // Refs to avoid stale closures in pointer handlers
   const annotatingRef = useRef(annotating);
   const onAnnotateRef = useRef(onAnnotate);
   const longPressFiredRef = useRef(false);
+  const pendingPinFracRef = useRef<number | null>(null);
 
   useEffect(() => {
     annotatingRef.current = annotating;
@@ -103,6 +106,7 @@ export const WaveformPlayer = forwardRef<
       interact: true,
       normalize: true,
       fillParent: true,
+      dragToSeek: false,
       plugins: [wsRegions],
     });
 
@@ -128,6 +132,7 @@ export const WaveformPlayer = forwardRef<
     ws.on("interaction", (newTime: number) => {
       if (annotatingRef.current && longPressFiredRef.current) {
         longPressFiredRef.current = false;
+        setPendingPinFrac(null);
         onAnnotateRef.current?.(newTime);
       }
     });
@@ -225,10 +230,12 @@ export const WaveformPlayer = forwardRef<
     if (!annotatingRef.current) return;
     pointerStartRef.current = { x: e.clientX, y: e.clientY };
     longPressFiredRef.current = false;
+    const rect = e.currentTarget.getBoundingClientRect();
+    pendingPinFracRef.current = (e.clientX - rect.left) / rect.width;
     longPressTimerRef.current = setTimeout(() => {
       longPressTimerRef.current = null;
       longPressFiredRef.current = true;
-      // Accurate time is obtained from wavesurfer's 'interaction' event on release
+      setPendingPinFrac(pendingPinFracRef.current);
     }, 500);
   };
 
@@ -242,6 +249,7 @@ export const WaveformPlayer = forwardRef<
         longPressTimerRef.current = null;
       }
       longPressFiredRef.current = false;
+      setPendingPinFrac(null);
     }
   };
 
@@ -260,6 +268,7 @@ export const WaveformPlayer = forwardRef<
       longPressTimerRef.current = null;
     }
     longPressFiredRef.current = false;
+    setPendingPinFrac(null);
   };
 
   return (
@@ -284,9 +293,15 @@ export const WaveformPlayer = forwardRef<
         )}
         <div
           ref={containerRef}
-          className={error ? "hidden" : ""}
+          className={error ? "hidden" : "select-none"}
           style={{ minHeight: height }}
         />
+        {pendingPinFrac !== null && (
+          <div
+            className="pointer-events-none absolute inset-y-2 w-0.5 -translate-x-1/2 bg-amber-400/60"
+            style={{ left: `${pendingPinFrac * 100}%` }}
+          />
+        )}
       </div>
       <div className="flex justify-end">
         <span className="font-mono text-xs tabular-nums text-gray-500">
