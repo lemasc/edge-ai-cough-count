@@ -16,6 +16,7 @@ import { useTrackedRegions } from "~/hooks/useTrackedRegions";
 
 export interface WaveformPlayerHandle {
   seekTo: (timeSecs: number) => void;
+  playFrom: (timeSecs: number) => void;
 }
 
 type WaveformPlayerProps = {
@@ -84,6 +85,14 @@ export const WaveformPlayer = forwardRef<
       const dur = ws.getDuration();
       if (dur <= 0) return;
       ws.seekTo(timeSecs / dur);
+    },
+    playFrom: (timeSecs: number) => {
+      const ws = wavesurferRef.current;
+      if (!ws) return;
+      const dur = ws.getDuration();
+      if (dur <= 0) return;
+      ws.seekTo(timeSecs / dur);
+      ws.play();
     },
   }));
 

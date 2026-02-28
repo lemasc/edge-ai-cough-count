@@ -237,7 +237,7 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
                       </span>
                       <button
                         type="button"
-                        onClick={() => waveformRef.current?.seekTo(ev.start)}
+                        onClick={() => waveformRef.current?.playFrom(ev.start)}
                         className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition active:scale-90"
                         aria-label={`Seek to cough ${i + 1}`}
                       >
@@ -282,7 +282,9 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => waveformRef.current?.seekTo(t)}
+                      onClick={() =>
+                        waveformRef.current?.playFrom(Math.max(t - 0.1, 0))
+                      }
                       className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition active:scale-90"
                       aria-label={`Seek to missed cough ${i + 1}`}
                     >
