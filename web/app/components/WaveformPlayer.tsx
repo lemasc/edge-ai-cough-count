@@ -13,6 +13,7 @@ import RegionsPlugin, {
 } from "wavesurfer.js/plugins/regions";
 import { PauseIcon, PlayIcon } from "lucide-react";
 import { useTrackedRegions } from "~/hooks/useTrackedRegions";
+import posthog from "posthog-js";
 
 export interface WaveformPlayerHandle {
   seekTo: (timeSecs: number) => void;
@@ -118,8 +119,11 @@ export const WaveformPlayer = forwardRef<
     ws.on("play", () => setIsPlaying(true));
     ws.on("pause", () => setIsPlaying(false));
     ws.on("finish", () => setIsPlaying(false));
-    ws.on("error", () => {
-      if (!destroyed) setError("Could not decode audio");
+    ws.on("error", (err) => {
+      if (!destroyed) {
+        setError("Could not decode audio");
+        posthog.captureException(err instanceof Error ? err : new Error(String(err)));
+      }
     });
 
     ws.load(url);

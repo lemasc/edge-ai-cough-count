@@ -14,4 +14,7 @@ export default defineConfig({
   server: {
     allowedHosts: [".ngrok-free.app"],
   },
+  build: {
+    sourcemap: true,
+  },
 });

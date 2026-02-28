@@ -14,10 +14,12 @@
     "db:migrate": "wrangler d1 migrations apply coughsense"
   },
   "dependencies": {
+    "@posthog/react": "^1.8.1",
     "drizzle-orm": "^0.45.1",
     "fflate": "^0.8.2",
     "isbot": "^5.1.31",
     "lucide-react": "^0.575.0",
+    "posthog-js": "^1.356.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router": "^7.10.0",

@@ -9,6 +9,8 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { useEffect } from "react";
+import posthog from "posthog-js";
 
 export const meta: Route.MetaFunction = () => [
   {
@@ -54,6 +56,12 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (!isRouteErrorResponse(error) && error instanceof Error) {
+      posthog.captureException(error);
+    }
+  }, [error]);
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;

@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import posthog from "posthog-js";
 
 export function useAudioRecorder() {
   const streamRef = useRef<MediaStream | null>(null);
@@ -18,7 +19,10 @@ export function useAudioRecorder() {
       });
       streamRef.current = stream;
       return 'granted';
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'NotAllowedError') {
+        posthog.captureException(err);
+      }
       return 'denied';
     }
   }, []);
