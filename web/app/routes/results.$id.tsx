@@ -75,12 +75,14 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
         >
           Evaluate Results
         </Link>
-        <Link
-          to="/complete"
-          className="flex min-h-12 w-full items-center justify-center rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
-        >
-          Skip
-        </Link>
+        <div className="flex items-center justify-center">
+          <Link
+            to="/complete"
+            className="text-center px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+          >
+            Skip
+          </Link>
+        </div>
       </div>
     </div>
   );

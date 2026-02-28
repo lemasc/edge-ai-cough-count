@@ -156,53 +156,47 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
         />
 
         {/* Annotation controls */}
-        {!annotating ? (
-          <button
-            type="button"
-            onClick={() => setAnnotating(true)}
-            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:border-gray-500 hover:text-white active:scale-95"
-          >
-            + Add Missed Cough
-          </button>
-        ) : pendingTime === null ? (
-          <div className="space-y-2">
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-              Long press on the waveform to mark a missed cough
-            </div>
-            <button
-              type="button"
-              onClick={cancelAnnotation}
-              className="flex min-h-10 w-full items-center justify-center rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-center text-sm text-amber-300">
-              <span className="font-mono tabular-nums">
-                {formatSeconds(pendingTime)}
-              </span>
-              {" — long press to reposition"}
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={confirmAnnotation}
-                className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-400 active:scale-95"
-              >
-                Confirm
-              </button>
+        {annotating ? (
+          pendingTime === null ? (
+            <div className="space-y-2">
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                Long press on the waveform to mark a missed cough
+              </div>
               <button
                 type="button"
                 onClick={cancelAnnotation}
-                className="flex min-h-10 flex-1 items-center justify-center rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+                className="flex min-h-10 w-full items-center justify-center rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
               >
                 Cancel
               </button>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-2">
+              <p className="text-center text-sm text-amber-300">
+                <span className="font-mono tabular-nums">
+                  {formatSeconds(pendingTime)}
+                </span>
+                {" — long press to reposition"}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={confirmAnnotation}
+                  className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-400 active:scale-95"
+                >
+                  Confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelAnnotation}
+                  className="flex min-h-10 flex-1 items-center justify-center rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )
+        ) : null}
       </div>
 
       {/* Scrollable content */}
@@ -299,6 +293,13 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
               ))}
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => setAnnotating(true)}
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:border-gray-500 hover:text-white active:scale-95"
+          >
+            + Add Missed Cough
+          </button>
         </div>
 
         {/* Form submission */}
@@ -319,12 +320,14 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
           >
             Submit Evaluation
           </button>
-          <Link
-            to="/complete"
-            className="flex min-h-12 w-full items-center justify-center rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
-          >
-            Skip
-          </Link>
+          <div className="flex items-center justify-center">
+            <Link
+              to="/complete"
+              className="text-center px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+            >
+              Skip
+            </Link>
+          </div>
         </Form>
       </div>
     </div>

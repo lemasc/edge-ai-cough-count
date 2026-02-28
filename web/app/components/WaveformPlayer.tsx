@@ -104,7 +104,7 @@ export const WaveformPlayer = forwardRef<
       barGap: 1,
       barRadius: 2,
       interact: true,
-      normalize: true,
+      normalize: false,
       fillParent: true,
       dragToSeek: false,
       plugins: [wsRegions],
