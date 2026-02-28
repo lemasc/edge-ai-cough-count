@@ -6,9 +6,8 @@ import * as schema from "~/db/schema";
 import { eq } from "drizzle-orm";
 import { WaveformPlayer } from "~/components/WaveformPlayer";
 import type { WaveformPlayerHandle } from "~/components/WaveformPlayer";
-import { EvaluationTimeline } from "~/components/EvaluationTimeline";
 import { formatSeconds } from "~/utils/formatTime";
-import { PlayIcon } from "lucide-react";
+import { PlayIcon, XIcon } from "lucide-react";
 
 type EventVerdict = "tp" | "mixed" | "fp";
 
@@ -94,8 +93,6 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
 
   const startTimes = JSON.parse(recording.startTimes ?? "[]") as number[];
   const endTimes = JSON.parse(recording.endTimes ?? "[]") as number[];
-  const durationSecs =
-    recording.durationMs != null ? recording.durationMs / 1000 : 0;
 
   const [detectedEventEvals, setDetectedEventEvals] = useState<
     DetectedEventEval[]
@@ -107,6 +104,8 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
     })),
   );
   const [missedCoughPoints, setMissedCoughPoints] = useState<number[]>([]);
+  const [annotating, setAnnotating] = useState(false);
+  const [pendingTime, setPendingTime] = useState<number | null>(null);
   const waveformRef = useRef<WaveformPlayerHandle>(null);
 
   function updateVerdict(index: number, verdict: EventVerdict) {
@@ -115,98 +114,219 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
     );
   }
 
+  function handleAnnotate(t: number) {
+    setPendingTime(t);
+  }
+
+  function confirmAnnotation() {
+    if (pendingTime === null) return;
+    setMissedCoughPoints((prev) =>
+      [...prev, pendingTime].sort((a, b) => a - b),
+    );
+    setPendingTime(null);
+    setAnnotating(false);
+  }
+
+  function cancelAnnotation() {
+    setPendingTime(null);
+    setAnnotating(false);
+  }
+
   return (
-    <div className="w-full max-w-sm space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-white">Evaluate Results</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          Review detected events and mark any coughs the model missed.
-        </p>
-      </div>
+    <div className="w-full max-w-sm">
+      {/* Sticky header: title + waveform + annotation controls */}
+      <div className="sticky top-0 z-10 bg-gray-950 pb-4 space-y-4">
+        <div>
+          <h1 className="text-xl font-bold text-white">Evaluate Results</h1>
+          <p className="mt-1 text-sm text-gray-400">
+            Review detected events and mark any coughs the model missed.
+          </p>
+        </div>
 
-      <WaveformPlayer
-        ref={waveformRef}
-        src={`/results/${recording.id}/audio`}
-        startTimes={startTimes}
-        endTimes={endTimes}
-      />
+        <WaveformPlayer
+          ref={waveformRef}
+          src={`/results/${recording.id}/audio`}
+          startTimes={startTimes}
+          endTimes={endTimes}
+          height={72}
+          annotating={annotating}
+          pendingAnnotationTime={pendingTime}
+          onAnnotate={handleAnnotate}
+          markerTimes={missedCoughPoints}
+        />
 
-      {/* Section 1: Detected events */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-          Review Detected Events
-        </p>
-        {detectedEventEvals.length === 0 ? (
-          <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-center text-sm text-gray-500">
-            No detections to review
+        {/* Annotation controls */}
+        {!annotating ? (
+          <button
+            type="button"
+            onClick={() => setAnnotating(true)}
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:border-gray-500 hover:text-white active:scale-95"
+          >
+            + Add Missed Cough
+          </button>
+        ) : pendingTime === null ? (
+          <div className="space-y-2">
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+              Long press on the waveform to mark a missed cough
+            </div>
+            <button
+              type="button"
+              onClick={cancelAnnotation}
+              className="flex min-h-10 w-full items-center justify-center rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+            >
+              Cancel
+            </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {detectedEventEvals.map((ev, i) => (
-              <div
-                key={`${ev.start}-${ev.end}`}
-                className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 space-y-2"
+          <div className="space-y-2">
+            <p className="text-center text-sm text-amber-300">
+              <span className="font-mono tabular-nums">
+                {formatSeconds(pendingTime)}
+              </span>
+              {" — long press to reposition"}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={confirmAnnotation}
+                className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-400 active:scale-95"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Cough {i + 1}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs tabular-nums text-gray-200">
-                      {formatSeconds(ev.start)} – {formatSeconds(ev.end)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => waveformRef.current?.seekTo(ev.start)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition active:scale-90"
-                      aria-label={`Seek to cough ${i + 1}`}
-                    >
-                      <PlayIcon className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <VerdictToggle
-                  verdict={ev.verdict}
-                  onChange={(v) => updateVerdict(i, v)}
-                />
-              </div>
-            ))}
+                Confirm
+              </button>
+              <button
+                type="button"
+                onClick={cancelAnnotation}
+                className="flex min-h-10 flex-1 items-center justify-center rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Section 2: Missed coughs timeline */}
-      <EvaluationTimeline
-        durationSecs={durationSecs}
-        detectedStartTimes={startTimes}
-        detectedEndTimes={endTimes}
-        missedCoughPoints={missedCoughPoints}
-        onChange={setMissedCoughPoints}
-      />
+      {/* Scrollable content */}
+      <div className="space-y-6 pt-2">
+        {/* Section 1: Detected events */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            Review Detected Events
+          </p>
+          {detectedEventEvals.length === 0 ? (
+            <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-center text-sm text-gray-500">
+              No detections to review
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {detectedEventEvals.map((ev, i) => (
+                <div
+                  key={`${ev.start}-${ev.end}`}
+                  className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Cough {i + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs tabular-nums text-gray-200">
+                        {formatSeconds(ev.start)} – {formatSeconds(ev.end)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => waveformRef.current?.seekTo(ev.start)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition active:scale-90"
+                        aria-label={`Seek to cough ${i + 1}`}
+                      >
+                        <PlayIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <VerdictToggle
+                    verdict={ev.verdict}
+                    onChange={(v) => updateVerdict(i, v)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Form submission */}
-      <Form method="post" className="space-y-3">
-        <input
-          type="hidden"
-          name="detectedEvents"
-          value={JSON.stringify(detectedEventEvals)}
-        />
-        <input
-          type="hidden"
-          name="missedCoughPoints"
-          value={JSON.stringify(missedCoughPoints)}
-        />
-        <button
-          type="submit"
-          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
-        >
-          Submit Evaluation
-        </button>
-        <Link
-          to="/complete"
-          className="flex min-h-12 w-full items-center justify-center rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
-        >
-          Skip
-        </Link>
-      </Form>
+        {/* Section 2: Missed coughs */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            Missed Coughs
+          </p>
+          {missedCoughPoints.length === 0 ? (
+            <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-center text-sm text-gray-500">
+              No missed coughs marked
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {missedCoughPoints.map((t, i) => (
+                <div
+                  key={`missed-${t}`}
+                  className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-400">
+                      Missed {i + 1}
+                    </span>
+                    <span className="font-mono text-xs tabular-nums text-gray-200">
+                      {formatSeconds(t)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => waveformRef.current?.seekTo(t)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition active:scale-90"
+                      aria-label={`Seek to missed cough ${i + 1}`}
+                    >
+                      <PlayIcon className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMissedCoughPoints((prev) =>
+                          prev.filter((_, j) => j !== i),
+                        )
+                      }
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 text-gray-400 hover:border-red-500 hover:text-red-400 transition active:scale-90"
+                      aria-label={`Remove missed cough ${i + 1}`}
+                    >
+                      <XIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Form submission */}
+        <Form method="post" className="space-y-3">
+          <input
+            type="hidden"
+            name="detectedEvents"
+            value={JSON.stringify(detectedEventEvals)}
+          />
+          <input
+            type="hidden"
+            name="missedCoughPoints"
+            value={JSON.stringify(missedCoughPoints)}
+          />
+          <button
+            type="submit"
+            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
+          >
+            Submit Evaluation
+          </button>
+          <Link
+            to="/complete"
+            className="flex min-h-12 w-full items-center justify-center rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
+          >
+            Skip
+          </Link>
+        </Form>
+      </div>
     </div>
   );
 }

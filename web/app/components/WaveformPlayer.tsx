@@ -2,13 +2,17 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { formatSeconds } from "../utils/formatTime";
 import WaveSurfer from "wavesurfer.js";
-import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.js";
+import RegionsPlugin, {
+  type RegionParams,
+} from "wavesurfer.js/plugins/regions";
 import { PauseIcon, PlayIcon } from "lucide-react";
+import { useTrackedRegions } from "~/hooks/useTrackedRegions";
 
 export interface WaveformPlayerHandle {
   seekTo: (timeSecs: number) => void;
@@ -18,6 +22,11 @@ type WaveformPlayerProps = {
   src: string;
   startTimes: number[];
   endTimes: number[];
+  height?: number;
+  annotating?: boolean;
+  pendingAnnotationTime?: number | null;
+  onAnnotate?: (timeSecs: number) => void;
+  markerTimes?: number[];
 };
 
 const regionColors = [
@@ -28,10 +37,22 @@ const regionColors = [
 export const WaveformPlayer = forwardRef<
   WaveformPlayerHandle,
   WaveformPlayerProps
->(function WaveformPlayer({ src, startTimes, endTimes }, ref) {
+>(function WaveformPlayer(
+  {
+    src,
+    startTimes,
+    endTimes,
+    height = 128,
+    annotating = false,
+    pendingAnnotationTime = null,
+    onAnnotate,
+    markerTimes = [],
+  },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
-  const regionsRef = useRef<RegionsPlugin | null>(null);
+  const regionsPluginRef = useRef<RegionsPlugin | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +60,23 @@ export const WaveformPlayer = forwardRef<
   const [minZoom, setMinZoom] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // Refs to avoid stale closures in pointer handlers
+  const durationRef = useRef(0);
+  const annotatingRef = useRef(annotating);
+  const onAnnotateRef = useRef(onAnnotate);
+
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
+  useEffect(() => {
+    annotatingRef.current = annotating;
+  }, [annotating]);
+
+  useEffect(() => {
+    onAnnotateRef.current = onAnnotate;
+  }, [onAnnotate]);
 
   useImperativeHandle(ref, () => ({
     seekTo: (timeSecs: number) => {
@@ -50,18 +88,16 @@ export const WaveformPlayer = forwardRef<
     },
   }));
 
-  const HEIGHT = 128;
-
   useEffect(() => {
     if (!containerRef.current) return;
 
     const url = src;
     const wsRegions = RegionsPlugin.create();
-    regionsRef.current = wsRegions;
+    regionsPluginRef.current = wsRegions;
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      height: HEIGHT,
+      height,
       waveColor: "#4B5563",
       progressColor: "#3B82F6",
       cursorColor: "#60A5FA",
@@ -101,7 +137,7 @@ export const WaveformPlayer = forwardRef<
       destroyed = true;
       ws.destroy();
       wavesurferRef.current = null;
-      regionsRef.current = null;
+      regionsPluginRef.current = null;
       setIsReady(false);
       setIsPlaying(false);
       setError(null);
@@ -110,38 +146,63 @@ export const WaveformPlayer = forwardRef<
       setCurrentTime(0);
       setDuration(0);
     };
-  }, [src]);
+  }, [src, height]);
 
-  useEffect(() => {
-    if (!isReady) return;
-    const regions = regionsRef.current;
-    if (!regions) return;
-
-    const existing = regions.getRegions();
-
-    // Update existing regions in-place (no DOM removal, no flash)
-    for (let i = 0; i < Math.min(startTimes.length, existing.length); i++) {
-      existing[i].setOptions({
-        start: startTimes[i],
-        end: endTimes[i],
-        color: regionColors[i % 2],
-      });
-    }
-    // Add any new regions beyond what already exists
-    for (let i = existing.length; i < startTimes.length; i++) {
-      regions.addRegion({
-        start: startTimes[i],
+  const coughRegions: RegionParams[] = useMemo(
+    () =>
+      startTimes.map((start, i) => ({
+        start,
         end: endTimes[i],
         color: regionColors[i % 2],
         drag: false,
         resize: false,
-      });
-    }
-    // Remove surplus regions if count shrank
-    for (let i = startTimes.length; i < existing.length; i++) {
-      existing[i].remove();
-    }
-  }, [startTimes, endTimes, isReady]);
+      })),
+    [startTimes, endTimes],
+  );
+
+  useTrackedRegions({
+    regions: coughRegions,
+    regionsPlugin: regionsPluginRef.current,
+    enabled: isReady,
+  });
+
+  const markerRegions: RegionParams[] = useMemo(
+    () =>
+      markerTimes.map((start) => ({
+        start,
+        color: "rgba(251, 191, 36, 0.8)",
+        drag: false,
+        resize: false,
+      })),
+    [markerTimes],
+  );
+
+  useTrackedRegions({
+    regions: markerRegions,
+    regionsPlugin: regionsPluginRef.current,
+    enabled: isReady,
+  });
+
+  const pendingMarker: RegionParams[] = useMemo(
+    () =>
+      pendingAnnotationTime != null
+        ? [
+            {
+              start: pendingAnnotationTime,
+              color: "rgba(251, 191, 36, 1)",
+              drag: false,
+              resize: false,
+            },
+          ]
+        : [],
+    [pendingAnnotationTime],
+  );
+
+  useTrackedRegions({
+    regions: pendingMarker,
+    regionsPlugin: regionsPluginRef.current,
+    enabled: isReady,
+  });
 
   useEffect(() => {
     if (isReady) {
@@ -153,12 +214,51 @@ export const WaveformPlayer = forwardRef<
     wavesurferRef.current?.playPause();
   };
 
+  // Long-press state stored in refs (not state, to avoid re-renders)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!annotatingRef.current) return;
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+    const time = frac * durationRef.current;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTimerRef.current = null;
+      onAnnotateRef.current?.(Math.max(0, Math.min(time, durationRef.current)));
+    }, 500);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!longPressTimerRef.current || !pointerStartRef.current) return;
+    const dx = e.clientX - pointerStartRef.current.x;
+    const dy = e.clientY - pointerStartRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 8) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handlePointerUpCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
   return (
     <div className="space-y-3">
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
         Recording
       </p>
-      <div className="relative rounded-xl bg-gray-900 px-1 py-2">
+      <div
+        className={`relative rounded-xl bg-gray-900 px-1 py-2 transition ${annotating ? "ring-2 ring-amber-500" : ""}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUpCancel}
+        onPointerCancel={handlePointerUpCancel}
+      >
         {!isReady && !error && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-700 border-t-blue-500" />
@@ -170,7 +270,7 @@ export const WaveformPlayer = forwardRef<
         <div
           ref={containerRef}
           className={error ? "hidden" : ""}
-          style={{ minHeight: HEIGHT }}
+          style={{ minHeight: height }}
         />
       </div>
       <div className="flex justify-end">
