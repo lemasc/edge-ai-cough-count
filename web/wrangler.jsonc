@@ -8,7 +8,7 @@
 	"compatibility_date": "2025-04-04",
 	"main": "./workers/app.ts",
 	"vars": {
-		"PREDICT_API_URL": "https://your-fastapi.example.com"
+		"PREDICT_API_URL": "https://coughsense-api.makufff.dev"
 	},
 	"observability": {
 		"enabled": true
