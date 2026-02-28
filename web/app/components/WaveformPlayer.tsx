@@ -62,13 +62,9 @@ export const WaveformPlayer = forwardRef<
   const [duration, setDuration] = useState(0);
 
   // Refs to avoid stale closures in pointer handlers
-  const durationRef = useRef(0);
   const annotatingRef = useRef(annotating);
   const onAnnotateRef = useRef(onAnnotate);
-
-  useEffect(() => {
-    durationRef.current = duration;
-  }, [duration]);
+  const longPressFiredRef = useRef(false);
 
   useEffect(() => {
     annotatingRef.current = annotating;
@@ -127,6 +123,13 @@ export const WaveformPlayer = forwardRef<
     ws.on("finish", () => setIsPlaying(false));
     ws.on("error", () => {
       if (!destroyed) setError("Could not decode audio");
+    });
+
+    ws.on("interaction", (newTime: number) => {
+      if (annotatingRef.current && longPressFiredRef.current) {
+        longPressFiredRef.current = false;
+        onAnnotateRef.current?.(newTime);
+      }
     });
 
     ws.load(url);
@@ -221,30 +224,42 @@ export const WaveformPlayer = forwardRef<
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!annotatingRef.current) return;
     pointerStartRef.current = { x: e.clientX, y: e.clientY };
-    const rect = e.currentTarget.getBoundingClientRect();
-    const frac = (e.clientX - rect.left) / rect.width;
-    const time = frac * durationRef.current;
+    longPressFiredRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
       longPressTimerRef.current = null;
-      onAnnotateRef.current?.(Math.max(0, Math.min(time, durationRef.current)));
+      longPressFiredRef.current = true;
+      // Accurate time is obtained from wavesurfer's 'interaction' event on release
     }, 500);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!longPressTimerRef.current || !pointerStartRef.current) return;
+    if (!pointerStartRef.current) return;
     const dx = e.clientX - pointerStartRef.current.x;
     const dy = e.clientY - pointerStartRef.current.y;
     if (Math.sqrt(dx * dx + dy * dy) > 8) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressFiredRef.current = false;
     }
   };
 
-  const handlePointerUpCancel = () => {
+  const handlePointerUp = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    // longPressFiredRef is intentionally not cleared here — the wavesurfer
+    // 'interaction' event fires after pointerup (on click) and uses it.
+  };
+
+  const handlePointerCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressFiredRef.current = false;
   };
 
   return (
@@ -256,8 +271,8 @@ export const WaveformPlayer = forwardRef<
         className={`relative rounded-xl bg-gray-900 px-1 py-2 transition ${annotating ? "ring-2 ring-amber-500" : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUpCancel}
-        onPointerCancel={handlePointerUpCancel}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {!isReady && !error && (
           <div className="absolute inset-0 flex items-center justify-center">
