@@ -56,9 +56,9 @@ const VERDICT_OPTIONS: {
   label: string;
   active: string;
 }[] = [
-  { value: "tp", label: "Correct", active: "bg-green-600 text-white" },
-  { value: "mixed", label: "Partial", active: "bg-amber-500 text-white" },
-  { value: "fp", label: "False Positive", active: "bg-red-600 text-white" },
+  { value: "tp", label: "ถูกต้อง", active: "bg-green-600 text-white" },
+  { value: "mixed", label: "ไม่ถูกบางส่วน", active: "bg-amber-500 text-white" },
+  { value: "fp", label: "ไม่ถูกต้อง", active: "bg-red-600 text-white" },
 ];
 
 function VerdictToggle({
@@ -132,10 +132,10 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
     return (
       <div className="w-full max-w-sm space-y-4">
         <div>
-          <h1 className="text-xl font-bold text-white">Mark Missed Cough</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Play the audio and pause at the desired time, then tap "Mark at
-            this time".
+          <h1 className="text-xl font-bold text-white">กำกับการไอที่ขาดหาย</h1>
+          <p className="mt-1 text-sm text-gray-200">
+            กำกับจุดที่การไอขาดหาย เนื่องจากโมเดลตรวจไม่พบ โดยเล่นเสียง
+            และหยุดในจุดเวลาที่ต้องการ จากนั้นเลือก <b>กำกับที่เวลานี้</b>
           </p>
         </div>
 
@@ -153,27 +153,29 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
         <div className="space-y-2">
           {pendingTime !== null && (
             <p className="text-center text-sm text-amber-300">
-              {"Marked time - "}
+              {"กำกับเวลาไว้ที่ - "}
               <span className="font-mono tabular-nums">
                 {formatSeconds(pendingTime)}
               </span>
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => setPendingTime(waveformRef.current?.getCurrentTime() ?? 0)}
-            className="flex min-h-10 w-full items-center justify-center rounded-xl border border-amber-500 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/10 active:scale-95"
-          >
-            Mark at this time
-          </button>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setPendingTime(waveformRef.current?.getCurrentTime() ?? 0)
+              }
+              className="flex min-h-10 w-full items-center justify-center rounded-xl border border-amber-500 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/10 active:scale-95"
+            >
+              กำกับที่เวลานี้
+            </button>
             {pendingTime !== null && (
               <button
                 type="button"
                 onClick={confirmAnnotation}
                 className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-400 active:scale-95"
               >
-                Confirm
+                ยืนยัน
               </button>
             )}
             <button
@@ -181,7 +183,7 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
               onClick={cancelAnnotation}
               className="flex min-h-10 flex-1 items-center justify-center rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
             >
-              Cancel
+              ยกเลิก
             </button>
           </div>
         </div>
@@ -190,13 +192,14 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
   }
 
   return (
-    <div className="w-full max-w-sm">
+    <div className="w-full max-w-sm space-y-2">
       {/* Sticky header: title + waveform */}
-      <div className="sticky top-0 z-10 bg-gray-950 pb-4 space-y-4">
+      <div className="sticky top-0 z-10 bg-gray-950 py-4 space-y-4 border-b border-gray-600">
         <div>
-          <h1 className="text-xl font-bold text-white">Evaluate Results</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Review detected events and mark any coughs the model missed.
+          <h1 className="text-xl font-bold text-white">ประเมินผลลัพธ์</h1>
+          <p className="mt-1 text-sm text-gray-200">
+            ตรวจสอบการไอที่โมเดลตรวจพบ และทำเครื่องหมายสำหรับการไอที่ขาดหายไป
+            เมื่อเรียบร้อยแล้วให้กดปุ่ม <b>บันทึก</b> ด้านล่าง
           </p>
         </div>
 
@@ -215,11 +218,11 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
         {/* Section 1: Detected events */}
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Review Detected Events
+            ตรวจสอบการไอที่ตรวจพบ
           </p>
           {detectedEventEvals.length === 0 ? (
             <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-center text-sm text-gray-500">
-              No detections to review
+              ไม่มีเสียงไอที่ตรวจพบ
             </div>
           ) : (
             <div className="space-y-3">
@@ -229,7 +232,9 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
                   className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 space-y-2"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-400">Cough {i + 1}</span>
+                    <span className="text-sm text-gray-400">
+                      ครั้งที่ {i + 1}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs tabular-nums text-gray-200">
                         {formatSeconds(ev.start)} – {formatSeconds(ev.end)}
@@ -257,11 +262,11 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
         {/* Section 2: Missed coughs */}
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Missed Coughs
+            การไอที่ขาดหาย
           </p>
           {missedCoughPoints.length === 0 ? (
             <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-center text-sm text-gray-500">
-              No missed coughs marked
+              ยังไม่ได้บันทึกการไอใด ๆ
             </div>
           ) : (
             <div className="space-y-3">
@@ -311,7 +316,7 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
             onClick={() => setAnnotating(true)}
             className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:border-gray-500 hover:text-white active:scale-95"
           >
-            + Add Missed Cough
+            + เพิ่มการไอที่ขาดหาย
           </button>
         </div>
 
@@ -331,14 +336,14 @@ export default function EvaluateRoute({ loaderData }: Route.ComponentProps) {
             type="submit"
             className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
           >
-            Submit Evaluation
+            บันทึก
           </button>
           <div className="flex items-center justify-center">
             <Link
               to="/complete"
               className="text-center px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
             >
-              Skip
+              ข้าม
             </Link>
           </div>
         </Form>

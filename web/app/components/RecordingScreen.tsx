@@ -69,7 +69,7 @@ export function RecordingScreen({
         {phase === "countdown" && (
           <>
             <span className="text-sm font-medium text-yellow-400 uppercase tracking-wider">
-              Get Ready
+              เตรียมตัวให้พร้อม
             </span>
             <div className="font-mono text-8xl font-bold tabular-nums text-yellow-400">
               {countdown}
@@ -82,7 +82,7 @@ export function RecordingScreen({
             <div className="flex items-center justify-center gap-3">
               <span className="inline-block h-4 w-4 animate-pulse rounded-full bg-red-500" />
               <span className="text-sm font-medium text-red-400 uppercase tracking-wider">
-                Recording
+                กำลังบันทึกเสียง
               </span>
             </div>
             <div className="font-mono text-6xl font-bold tabular-nums">
@@ -96,7 +96,7 @@ export function RecordingScreen({
                 />
               </div>
               <div className="text-xs text-gray-500">
-                max {formatTime(MAX_DURATION_MS)}
+                ไม่เกิน {formatTime(MAX_DURATION_MS)}
               </div>
             </div>
           </>
@@ -109,7 +109,7 @@ export function RecordingScreen({
             onClick={onStop}
             className="min-h-12 w-full rounded-xl bg-red-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-red-500 active:scale-95"
           >
-            Stop
+            สิ้นสุด
           </button>
         )}
         <button
@@ -117,7 +117,7 @@ export function RecordingScreen({
           onClick={onCancel}
           className="text-sm w-full min-h-12 border border-gray-600 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 transition"
         >
-          Cancel
+          ยกเลิก
         </button>
       </div>
     </div>

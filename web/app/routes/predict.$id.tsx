@@ -92,7 +92,7 @@ export default function PredictRoute({ loaderData }: Route.ComponentProps) {
       <div className="w-full max-w-sm space-y-6 text-center">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
-          <p className="text-lg font-semibold">Analyzing audio…</p>
+          <p className="text-lg font-semibold">กำลังวิเคราะห์เสียง...</p>
         </div>
       </div>
     );
@@ -101,7 +101,9 @@ export default function PredictRoute({ loaderData }: Route.ComponentProps) {
   if (recording.status === "error") {
     return (
       <div className="w-full max-w-sm space-y-6 text-center">
-        <p className="text-lg font-semibold text-red-400">Analysis failed</p>
+        <p className="text-lg font-semibold text-red-400">
+          เกิดข้อผิดพลาดในการวิเคราะห์
+        </p>
         {recording.errorMessage && (
           <p className="text-sm text-gray-500">{recording.errorMessage}</p>
         )}
@@ -111,14 +113,14 @@ export default function PredictRoute({ loaderData }: Route.ComponentProps) {
               type="submit"
               className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
             >
-              Retry Analysis
+              ลองอีกครั้ง
             </button>
           </Form>
           <Link
             to="/record"
             className="block min-h-12 w-full rounded-xl border border-gray-700 px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
           >
-            Record Again
+            บันทึกเสียงใหม่
           </Link>
         </div>
       </div>
@@ -127,13 +129,13 @@ export default function PredictRoute({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="w-full max-w-sm space-y-6 text-center">
-      <p className="text-lg font-semibold">Ready to analyze</p>
+      <p className="text-lg font-semibold">พร้อมสำหรับการวิเคราะห์เสียง</p>
       <Form method="post">
         <button
           type="submit"
           className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
         >
-          Start Analysis
+          เริ่มต้นการวิเคราะห์
         </button>
       </Form>
     </div>

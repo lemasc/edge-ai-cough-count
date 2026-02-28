@@ -213,8 +213,8 @@ export const WaveformPlayer = forwardRef<
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-        Recording
+      <p className="text-xs font-semibold tracking-wider text-gray-500">
+        เสียงที่บันทึก
       </p>
       <div
         className={`relative rounded-xl bg-gray-900 px-1 py-2 transition ${annotating ? "ring-2 ring-amber-500" : ""}`}
@@ -264,12 +264,12 @@ export const WaveformPlayer = forwardRef<
         {isPlaying ? (
           <>
             <PauseIcon className="h-5 w-5" />
-            Pause
+            หยุดชั่วคราว
           </>
         ) : (
           <>
             <PlayIcon className="h-5 w-5" />
-            Play
+            เล่น
           </>
         )}
       </button>

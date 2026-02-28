@@ -30,10 +30,10 @@ function StatusBadge({
   };
 
   const statusText: Record<BadgeStatus, string> = {
-    unknown: "Unknown",
-    granted: "Granted",
-    denied: "Denied",
-    unavailable: "Unavailable",
+    unknown: "ไม่ทราบสถานะ",
+    granted: "ได้รับอนุญาต",
+    denied: "ถูกปฏิเสธ",
+    unavailable: "ไม่สามารถใช้ได้",
   };
 
   return (
@@ -42,7 +42,7 @@ function StatusBadge({
     >
       <span className="text-sm font-medium">{label}</span>
       <span className="text-sm font-semibold">
-        {icons[status]} {statusText[status]}
+        {statusText[status]} {icons[status]}
       </span>
     </div>
   );
@@ -63,13 +63,13 @@ export function PermissionScreen({
   const showBeginRecording = phase === "ready" && Boolean(onBeginRecording);
   const showPermissions = phase !== "idle" || permissions.audio !== "unknown";
 
-  const handleStart = () => {
+  const onRequestPermission = () => {
     setErrorMessage(null);
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setPermissions({ audio: "unavailable" });
       setErrorMessage(
-        "Microphone access isn't supported in this browser. Please try a different browser.",
+        "เบราวเซอร์ของคุณไม่รองรับการเข้าถึงไมโครโฟน กรุณาใช้เบราวเซอร์ Google Chrome หรือ Safari",
       );
       setPhase("idle");
       return;
@@ -84,70 +84,82 @@ export function PermissionScreen({
       }
 
       setPermissions({ audio: "denied" });
-      setErrorMessage(
-        "Microphone access denied. Please allow access in your browser settings and try again.",
-      );
       setPhase("idle");
     });
   };
 
   return (
-    <div className="w-full max-w-sm space-y-8">
-      <div className="text-center">
-        <div className="mb-4 text-5xl">🎤</div>
-        <h1 className="text-2xl font-bold">Cough Dataset Collector</h1>
-        <p className="mt-2 text-gray-400 text-sm">
-          Records audio for cough detection research
-        </p>
+    <div className="w-full max-w-sm space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-bold pb-1">ก่อนจะเริ่มต้น</h1>
+        <p>กรุณาอ่านรายละเอียดการบันทึกเสียง ดังนี้:</p>
+      </div>
+      <div className="bg-white/10 p-4 rounded-lg">
+        <ol className="list-decimal list-outside pl-6 leading-7">
+          <li>ผู้ใช้งานต้องบันทึกเสียงไอ ภายในเวลาไม่เกิน 10 วินาที</li>
+          <li>
+            ในการบันทึกเสียง ให้ถือโทรศัพท์โดย{" "}
+            <b className="text-blue-300">แนบกับหน้าอก</b>
+          </li>
+          <li>
+            หลังจากครบระยะเวลาแล้ว
+            เสียงของคุณจะถูกนำไปประมวลผลเพื่อตรวจจับและนับจำนวนการไอทั้งหมด
+          </li>
+          <li>
+            ผู้ใช้งานสามารถอัดเสียงในสภาพแวดล้อมที่มีเสียงรบกวนด้วยได้
+            เพื่อทดสอบความสามารถในการตรวจจับเสียงไอในสภาพแวดล้อมต่าง ๆ
+          </li>
+        </ol>
       </div>
 
       {showPermissions && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Permissions
+          <p className="text-xs font-semibold tracking-wider text-gray-500">
+            สิทธิ์การเข้าถึง
           </p>
-          <StatusBadge status={permissions.audio} label="Microphone" />
+          <StatusBadge status={permissions.audio} label="ไมโครโฟน" />
           {errorMessage && (
-            <p className="text-xs text-red-400">{errorMessage}</p>
+            <p className="text-xs text-red-400 leading-5">{errorMessage}</p>
           )}
           {!errorMessage && permissions.audio === "denied" && (
-            <p className="text-xs text-red-400">
-              Microphone access denied. Please allow in browser settings and
-              reload.
+            <p className="text-xs text-red-400 leading-5">
+              สิทธิ์การเข้าถึงไมโครโฟนถูกปฏิเสธ
+              กรุณาอนุญาตการเข้าถึงในเบราวเซอร์ และ Refresh หน้าเว็บใหม่อีกครั้ง
             </p>
           )}
         </div>
       )}
 
-      {phase === "idle" && (
-        <button
-          type="button"
-          onClick={handleStart}
-          className="min-h-12 w-full rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
-        >
-          Request Microphone Access
-        </button>
-      )}
-
-      {phase === "requesting-permissions" && (
-        <button
-          type="button"
-          disabled
-          className="min-h-12 w-full cursor-not-allowed rounded-xl bg-blue-600/50 px-6 py-3 text-base font-semibold text-white/50"
-        >
-          Requesting permissions…
-        </button>
-      )}
-
-      {showBeginRecording && (
-        <button
-          type="button"
-          onClick={onBeginRecording}
-          disabled={permissions.audio !== "granted"}
-          className="min-h-12 w-full rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-green-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Begin Recording
-        </button>
+      {!showBeginRecording ? (
+        <>
+          <p className="text-center font-bold">
+            เพื่อเริ่มต้น กรุณาอนุญาตสิทธิ์การเข้าถึงไมโครโฟน
+          </p>
+          <button
+            type="button"
+            onClick={onRequestPermission}
+            disabled={phase === "requesting-permissions"}
+            className="min-h-12 w-full rounded-xl bg-blue-600 disabled:bg-blue-600/50 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500"
+          >
+            {phase === "requesting-permissions"
+              ? "กำลังขอสิทธิ์เข้าถึง..."
+              : "ขอสิทธิ์เข้าถึงไมโครโฟน"}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-center font-bold">
+            เมื่อพร้อม ให้เริ่มต้นการบันทึก โดยระบบจะนับถอยหลัง 3 วินาที
+          </p>
+          <button
+            type="button"
+            onClick={onBeginRecording}
+            disabled={permissions.audio !== "granted"}
+            className="min-h-12 w-full rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-green-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            เริ่มต้นการบันทึก
+          </button>
+        </>
       )}
     </div>
   );

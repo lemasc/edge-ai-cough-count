@@ -25,11 +25,10 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="w-full max-w-sm space-y-6">
-      <div className="text-center">
+      <div className="text-center space-y-2">
+        <p className="text-lg text-gray-300">ตรวจพบการไอ</p>
         <div className="mb-2 text-5xl font-bold tabular-nums">{coughCount}</div>
-        <p className="text-lg text-gray-300">
-          {coughCount === 1 ? "cough detected" : "coughs detected"}
-        </p>
+        <p className="text-lg text-gray-300">ครั้ง</p>
       </div>
 
       <WaveformPlayer
@@ -41,7 +40,7 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
       {startTimes.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Detected Events
+            การไอที่ตรวจพบ
           </p>
           <div className="space-y-1 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3">
             {startTimes.map((start, i) => {
@@ -51,7 +50,7 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
                   key={`${start}-${end}`}
                   className="flex justify-between text-sm"
                 >
-                  <span className="text-gray-500">Cough {i + 1}</span>
+                  <span className="text-gray-500">ครั้งที่ {i + 1}</span>
                   <span className="font-mono text-gray-200">
                     {formatSeconds(start)} – {formatSeconds(end)}
                   </span>
@@ -64,7 +63,7 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
 
       {startTimes.length === 0 && (
         <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-center text-sm text-gray-500">
-          No cough events detected
+          ไม่มีการไอที่ตรวจพบ
         </div>
       )}
 
@@ -73,14 +72,14 @@ export default function ResultsRoute({ loaderData }: Route.ComponentProps) {
           to={`/evaluate/${recording.id}`}
           className="flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-500 active:scale-95"
         >
-          Evaluate Results
+          ประเมินผลลัพธ์
         </Link>
         <div className="flex items-center justify-center">
           <Link
             to="/complete"
             className="text-center px-6 py-3 text-base font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white active:scale-95"
           >
-            Skip
+            ข้าม
           </Link>
         </div>
       </div>

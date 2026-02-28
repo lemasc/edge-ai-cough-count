@@ -87,14 +87,7 @@ export default function RecordRoute() {
       <div className="w-full max-w-sm space-y-6 text-center">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-blue-500" />
-          <p className="text-lg font-semibold">Analyzing audio…</p>
-          {durationMs != null && (
-            <p className="text-sm text-gray-500">
-              Duration:{" "}
-              {String(Math.floor(durationMs / 60000)).padStart(2, "0")}:
-              {String(Math.floor((durationMs % 60000) / 1000)).padStart(2, "0")}
-            </p>
-          )}
+          <p className="text-lg font-semibold">กำลังวิเคราะห์เสียง...</p>
         </div>
       </div>
     );
