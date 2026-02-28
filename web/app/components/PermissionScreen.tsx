@@ -98,8 +98,11 @@ export function PermissionScreen({
         <ol className="list-decimal list-outside pl-6 leading-7">
           <li>ผู้ใช้งานต้องบันทึกเสียงไอ ภายในเวลาไม่เกิน 10 วินาที</li>
           <li>
-            ในการบันทึกเสียง ให้ถือโทรศัพท์โดย{" "}
-            <b className="text-blue-300">แนบกับหน้าอก</b>
+            ระหว่างบันทึกเสียง ให้{" "}
+            <b className="text-blue-300">
+              ถือโทรศัพท์กลับหัว โดยให้ไมโครโฟนอยู่ด้านบน
+            </b>{" "}
+            และ <b className="text-blue-300">แนบโทรศัพท์ไว้ที่กึ่งกลางหน้าอก</b>
           </li>
           <li>
             หลังจากครบระยะเวลาแล้ว
