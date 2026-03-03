@@ -1,3 +1,4 @@
+import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const recordings = sqliteTable("recordings", {
@@ -14,6 +15,9 @@ export const recordings = sqliteTable("recordings", {
   windowTimes: text("window_times"), // JSON
   probabilities: text("probabilities"), // JSON
   errorMessage: text("error_message"),
+  confirmedEvaluationId: text("confirmed_evaluation_id").references(
+    (): AnySQLiteColumn => evaluations.id,
+  ),
 });
 
 export const evaluations = sqliteTable("evaluations", {

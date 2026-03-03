@@ -47,3 +47,11 @@ export type RecordingLabel = {
 export type PermissionStatus = {
   audio: 'unknown' | 'granted' | 'denied' | 'unavailable';
 };
+
+export type EventVerdict = "tp" | "mixed" | "fp";
+
+export type DetectedEventEval = {
+  start: number;
+  end: number;
+  verdict: EventVerdict;
+};

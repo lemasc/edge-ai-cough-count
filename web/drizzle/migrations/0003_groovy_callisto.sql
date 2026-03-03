@@ -1,0 +1,1 @@
+ALTER TABLE `recordings` ADD `confirmed_evaluation_id` text REFERENCES evaluations(id);
